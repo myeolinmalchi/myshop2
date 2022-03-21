@@ -41,11 +41,10 @@ class SellerController @Inject() (protected val dbConfigProvider: DatabaseConfig
 				case JsSuccess(a, path) => f(a)
 				case e @JsError(_) => {
 					println(e.toString)
-					Future.successful(Redirect(routes.SellerController.registerPage))
+					Future.successful(Redirect(routes.SellerController.index))
 				}
-				
 			}
-		}.getOrElse((Future.successful(Redirect(routes.SellerController.registerPage))))
+		}.getOrElse((Future.successful(Redirect(routes.SellerController.index))))
 	}
 	
 	def index = Action { implicit request =>

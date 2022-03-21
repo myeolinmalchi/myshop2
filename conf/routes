@@ -49,3 +49,6 @@ GET     /seller/product                 controllers.SellerController.getProduct
 
 GET     /seller/product/register        controllers.SellerController.productRegisterPage
 POST    /seller/product/register        controllers.SellerController.addProduct
+
+# Map for search(/search)
+GET     /search/:code/:keyword                controllers.HomeController.search(code, keyword)

@@ -1,22 +1,14 @@
 package services
 
-import common.encryption.SHA256.encrypt
+import common.encryption._
 import dto._
 import javax.inject._
-import scala.concurrent.{ExecutionContext, Future}
-import slick.jdbc.MySQLProfile.api._
-import models.Tables._
+import models.{ProductModel, SellerModel}
 import scala.collection.mutable.Map
-import scala.util.{Failure, Success, Try}
-import java.security.MessageDigest
-import java.math.BigInteger
-import javax.crypto.Cipher
-import javax.crypto.spec.SecretKeySpec
-import common.encryption._
-import models.{CommonModelApi, ProductModel}
-import play.api.libs.json.Json
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
-import slick.lifted.AbstractTable
+import scala.util.{Failure, Success, Try}
+import slick.jdbc.MySQLProfile.api._
 
 /**
  * 판매자별 상품 CRUD 및 판매자 계정 CRUD
@@ -27,75 +19,56 @@ import slick.lifted.AbstractTable
 @Singleton
 class SellerService(db: Database)(implicit ec: ExecutionContext) {
 	
-	implicit val sellers = Sellers
-	implicit val products = Products
-	implicit val options = ProductOptions
-	implicit val items = ProductOptionItems
+	val productModel = new ProductModel(db)
+	val sellerModel = new SellerModel(db)
 	
-	val model = new ProductModel(db)
-	val commonApi = new CommonModelApi(db)
-	import commonApi._
-	
-//	TODO
-//	 - Service 레이어에서는 db run에 직접 접근하지 않게끔 수정
-	def login(sellerId: String, sellerPw: String): Future[Option[Boolean]] = {
-		import SHA256._
-		db.run(Sellers.filter(u => u.sellerId === sellerId).result).map(_.headOption match {
+	def login(sellerId: String, sellerPw: String): Future[Option[Boolean]] =
+		sellerModel.getSellerById(sellerId) map {
 			case Some(u) =>
-				if (u.sellerPw.equals(encrypt(sellerPw))) Some(true) // 로그인 성공
+				if (u.sellerPw.equals(SHA256.encrypt(sellerPw))) Some(true) // 로그인 성공
 				else Some(false) // 비밀번호 불일치
 			case None => None // 존재하지 않는 계정
-		})
-	}
+		}
 	
-	private def validate(seller: SellerDto): Future[SellerDto] = {
-		def checkPattern(str: String, pattern: String, errMsg: String): Future[String] =
-			if (!str.matches(pattern)) {
-				Future.failed(new IllegalArgumentException(errMsg))
-			} else Future.successful(str)
+	def accountValidation(seller: SellerDto): Future[SellerDto] = {
+		def patterns(implicit key: String) = Map (
+			"sellerId" -> "^[a-z]+[a-z0-9]{5,19}$",
+			"sellerPw" -> "^(?=.*\\d)(?=.*[a-zA-Z])[0-9a-zA-Z]{8,16}$",
+			"name" -> "^[ㄱ-힣]+$",
+			"email" -> "^[0-9a-zA-Z]([-_.]?[0-9a-zA-Z])*@[0-9a-zA-Z]([-_.]?[0-9a-zA-Z])*.[a-zA-Z]{2,3}$",
+			"phone" -> "^\\d{3}-\\d{3,4}-\\d{4}$"
+		)(key)
+		def noneMatchedMsg(implicit key: String): String = Map (
+			"sellerId" -> "유효하지 않은 아이디입니다.",
+			"sellerPw" -> "유효하지 않은 비밀번호입니다.",
+			"name"  -> "유효하지 않은 이름입니다.",
+			"email" -> "유효하지 않은 이메일입니다.",
+			"phone" -> "유효하지 않은 전화번호입니다."
+		)(key)
+		def checkPattern(str: String)(implicit key: String): Future[String] =
+			if (!str.matches(patterns))
+				Future.failed(new IllegalArgumentException(noneMatchedMsg))
+			else Future.successful(str)
 		
-		def validSellerId(sellerId: String): Future[String] = {
-			val pattern = "^[a-z]+[a-z0-9]{5,19}$"
-			if (!sellerId.matches(pattern)) {
-				Future.failed(new IllegalArgumentException("유효하지 않은 아이디입니다."))
-			} else {
-//				 TODO
-				val matches = db.run(Sellers.filter(u => u.sellerId === sellerId).result)
-				matches.flatMap { sellerRows =>
-					if (sellerRows.isEmpty) Future.successful(sellerId)
-					else throw new IllegalArgumentException("이미 존재하는 계정입니다.")
-				}
-			}
-		}
-		
-		def validSellerPw(sellerPw: String): Future[String] =
-			checkPattern(sellerPw,
-				"^(?=.*\\d)(?=.*[a-zA-Z])[0-9a-zA-Z]{8,16}$",
-				"유효하지 않은 비밀번호입니다.")
-		
-		def validName(name: String): Future[String] =
-			checkPattern(name,
-				"^[ㄱ-힣]+$",
-				"유효하지 않은 이름입니다.")
-		
-		def validEmail(email: String): Future[String] = {
-			val pattern = "^[0-9a-zA-Z]([-_.]?[0-9a-zA-Z])*@[0-9a-zA-Z]([-_.]?[0-9a-zA-Z])*.[a-zA-Z]{2,3}$"
-			if (!email.matches(pattern)) {
-				Future.failed(new IllegalArgumentException("유효하지 않은 이메일입니다."))
-			} else {
-//				 TODO
-				val matches = db.run(Sellers.filter(u => u.email === email).result)
-				matches.flatMap { sellerRows =>
-					if (sellerRows.isEmpty) Future.successful(email)
-					else throw new IllegalArgumentException("이미 존재하는 이메일입니다.")
-				}
-			}
-		}
-		
-		def validPhone(phone: String): Future[String] =
-			checkPattern(phone,
-				"^\\d{3}-\\d{3,4}-\\d{4}$",
-				"유효하지 않은 전화번호입니다.")
+		def validSellerId(sellerId: String): Future[String] =
+			checkPattern(sellerId)("sellerId") transform  {
+				case Success(sellerId) => Try(sellerId)
+				case Failure(e)	 => Failure(e)
+			} flatMap { sellerModel getSellerById(_) flatMap ({
+				case None => Future.successful(sellerId)
+				case Some(_) => throw new IllegalArgumentException("이미 존재하는 계정입니다.")
+			})}
+		def validSellerPw(sellerPw: String): Future[String] = checkPattern(sellerPw)("sellerPw")
+		def validName(name: String): Future[String] = checkPattern(name)("name")
+		def validEmail(email: String): Future[String] =
+			checkPattern(email)("email") transform  {
+				case Success(email) => Try(email)
+				case Failure(e)	 => Failure(e)
+			} flatMap { sellerModel getSellerByEmail(_) flatMap ({
+				case None => Future successful(email)
+				case Some(_) => throw new IllegalArgumentException("이미 사용중인 이메일입니다.")
+			})}
+		def validPhone(phone: String): Future[String] = checkPattern(phone)("phone")
 		
 		for {
 			sellerId <- validSellerId(seller.sellerId)
@@ -106,30 +79,24 @@ class SellerService(db: Database)(implicit ec: ExecutionContext) {
 		} yield seller
 	}
 	
-	def insertSeller(seller: SellerDto) = {
-		import SHA256._
-		db.run(Sellers.map(u => (u.sellerId, u.sellerPw, u.name, u.email, u.phonenumber))
-				+= (seller.sellerId, encrypt(seller.sellerPw), seller.name, seller.email, seller.phonenumber))
-	}
-	
 	def register(seller: SellerDto): Future[Option[String]] = {
-		import SHA256._
-		validate(seller).transform {
+		accountValidation(seller) transform {
 			case Success(result) =>
-				insertSeller(seller)
+				sellerModel insertSeller seller
 				Try(None)
 			case Failure(e) => Try(Some(e.getMessage))
 		}
 	}
 	
-//	 TODO
 	def findId(email: String): Future[Option[String]] =
-		selectOne[Sellers, SellerDto](SellerDto.newEntity){ seller =>
-			seller.email === email } map (_ map(_.sellerId))
+		sellerModel getSellerByEmail(email) map (_ map(_.sellerId))
 		
 	def getProductList(implicit sellerId: String): Future[List[ProductDto]] =
-		model.getProductList(product => product.sellerId === sellerId)
+		productModel.getProductList(product => product.sellerId === sellerId)
 	
-	def addProduct(implicit sellerId: String, p: ProductDto): Future[_] = model.addProduct
+	def addProduct(implicit sellerId: String, p: ProductDto): Future[_] = productModel.addProduct
 	
+	def searchProducts(keyword: String): Future[List[ProductDto]] = {
+		productModel getProductList { product => product.name like s"%${keyword}%" }
+	}
 }
