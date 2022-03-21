@@ -1,0 +1,21 @@
+@()(implicit request: RequestHeader, flash: Flash)
+
+@main("register") {
+    <div>
+        <h3>Seller Register Page</h3>
+        <br>
+        ID : <input type="text" name="sellerId" id="sellerId"/>
+        <br>
+        PW: <input type="password" name="sellerPw" id="sellerPw"/>
+        <br>
+        name: <input type="text" name="name" id="name"/>
+        <br>
+        email: <input type="text" name="email" id="email"/>
+        <br>
+        phone: <input type="text" name="phone" id="phone"/>
+        <br>
+        <input type="button" onclick="register()" value = "회원가입"/>
+    </div>
+
+    <script src="@routes.Assets.versioned("javascripts/seller.js")"></script>
+}

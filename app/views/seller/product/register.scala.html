@@ -1,0 +1,77 @@
+@(sellerId: String)(implicit request: RequestHeader, flash: Flash)
+
+@main("product register") {
+    <style>
+        .option {
+            border: solid black 2px;
+            padding: 10px;
+            margin: 10px;
+            width: 50%;
+        }
+
+        .hidden-option {
+            display : none;
+        }
+        .hidden-item {
+            display : none;
+        }
+
+        .item {
+            border: solid black 1px;
+            padding: 10px;
+        }
+    </style>
+
+    <div class="container">
+        <h3>Product Register Page</h3>
+        <br>
+        name : <input type="text" name="name" id="name"/>
+        <br>
+        price: <input type="number" name="price" id="price"/>
+        <br>
+        category: <input type="text" name="category" id="category"/>
+        <br>
+        detailInfo: <input type="text" name="detailInfo" id="detailInfo"/>
+        <br>
+        thumbnail: <input type="text" name="thumbnail" id="thumbnail"/>
+        <br>
+
+        <input type="button" onclick="addOption(this)" value = "옵션 추가"/>
+        <input type="button" onclick="addProduct('@sellerId')" value = "상품 등록"/>
+        <br>
+        <br>
+
+        <div class="hidden-option">
+            optionName: <input type="text" name="name" id="name"/> <br>
+            optionImages: <input type="text" name="images" id="images"/>
+
+            <input type="button" onclick="addItem(this)" value = "항목 추가"/> <br><br>
+            <div class="item">
+                itemName: <input type="text" name="name" id="name"/>
+                surcharge: <input type="number" name="surcharge" id="surcharge"/>
+                stock: <input type="number" name="stock" id="stock"/>
+            </div>
+        </div>
+
+        <div class="hidden-item">
+            itemName: <input type="text" name="name" id="name"/>
+            surcharge: <input type="number" name="surcharge" id="surcharge"/>
+            stock: <input type="number" name="stock" id="stock"/>
+        </div>
+
+        <div class="main-option option">
+            optionName: <input type="text" name="name" id="name"/> <br>
+            optionImages: <input type="text" name="images" id="images"/>
+
+            <input type="button" onclick="addItem(this)" value = "항목 추가"/> <br><br>
+            <div class="item">
+                itemName: <input type="text" name="name" id="name"/>
+                surcharge: <input type="number" name="surcharge" id="surcharge"/>
+                stock: <input type="number" name="stock" id="stock"/>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="@routes.Assets.versioned("/javascripts/seller.js")"></script>
+}
