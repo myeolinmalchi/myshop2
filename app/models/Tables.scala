@@ -201,11 +201,11 @@ trait Tables {
   lazy val Orders = new TableQuery(tag => new Orders(tag))
 
   /** Entity class storing rows of table ProductImages
-   *  @param productOptionItemId Database column product_option_item_id SqlType(INT)
+   *  @param productId Database column product_id SqlType(INT)
    *  @param productImageId Database column product_image_id SqlType(INT), AutoInc, PrimaryKey
-   *  @param url Database column url SqlType(VARCHAR), Length(2000,true)
+   *  @param image Database column image SqlType(LONGTEXT), Length(2147483647,true)
    *  @param sequence Database column sequence SqlType(INT) */
-  case class ProductImagesRow(productOptionItemId: Int, productImageId: Int, url: String, sequence: Int)
+  case class ProductImagesRow(productId: Int, productImageId: Int, image: String, sequence: Int)
   /** GetResult implicit for fetching ProductImagesRow objects using plain SQL queries */
   implicit def GetResultProductImagesRow(implicit e0: GR[Int], e1: GR[String]): GR[ProductImagesRow] = GR{
     prs => import prs._
@@ -213,21 +213,21 @@ trait Tables {
   }
   /** Table description of table product_images. Objects of this class serve as prototypes for rows in queries. */
   class ProductImages(_tableTag: Tag) extends profile.api.Table[ProductImagesRow](_tableTag, Some("myshop2"), "product_images") {
-    def * = (productOptionItemId, productImageId, url, sequence) <> (ProductImagesRow.tupled, ProductImagesRow.unapply)
+    def * = (productId, productImageId, image, sequence) <> (ProductImagesRow.tupled, ProductImagesRow.unapply)
     /** Maps whole row to an option. Useful for outer joins. */
-    def ? = ((Rep.Some(productOptionItemId), Rep.Some(productImageId), Rep.Some(url), Rep.Some(sequence))).shaped.<>({r=>import r._; _1.map(_=> ProductImagesRow.tupled((_1.get, _2.get, _3.get, _4.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+    def ? = ((Rep.Some(productId), Rep.Some(productImageId), Rep.Some(image), Rep.Some(sequence))).shaped.<>({r=>import r._; _1.map(_=> ProductImagesRow.tupled((_1.get, _2.get, _3.get, _4.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
 
-    /** Database column product_option_item_id SqlType(INT) */
-    val productOptionItemId: Rep[Int] = column[Int]("product_option_item_id")
+    /** Database column product_id SqlType(INT) */
+    val productId: Rep[Int] = column[Int]("product_id")
     /** Database column product_image_id SqlType(INT), AutoInc, PrimaryKey */
     val productImageId: Rep[Int] = column[Int]("product_image_id", O.AutoInc, O.PrimaryKey)
-    /** Database column url SqlType(VARCHAR), Length(2000,true) */
-    val url: Rep[String] = column[String]("url", O.Length(2000,varying=true))
+    /** Database column image SqlType(LONGTEXT), Length(2147483647,true) */
+    val image: Rep[String] = column[String]("image", O.Length(2147483647,varying=true))
     /** Database column sequence SqlType(INT) */
     val sequence: Rep[Int] = column[Int]("sequence")
 
-    /** Foreign key referencing ProductOptionItems (database name product_images_product_option_items_product_option_item_id_fk) */
-    lazy val productOptionItemsFk = foreignKey("product_images_product_option_items_product_option_item_id_fk", productOptionItemId, ProductOptionItems)(r => r.productOptionItemId, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
+    /** Foreign key referencing Products (database name FK_product_images_products) */
+    lazy val productsFk = foreignKey("FK_product_images_products", productId, Products)(r => r.productId, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
   }
   /** Collection-like TableQuery object for table ProductImages */
   lazy val ProductImages = new TableQuery(tag => new ProductImages(tag))
@@ -274,19 +274,18 @@ trait Tables {
    *  @param productId Database column product_id SqlType(INT)
    *  @param productOptionId Database column product_option_id SqlType(INT), AutoInc, PrimaryKey
    *  @param name Database column name SqlType(VARCHAR), Length(40,true)
-   *  @param optionSequence Database column option_sequence SqlType(INT)
-   *  @param images Database column images SqlType(VARCHAR), Length(2000,true) */
-  case class ProductOptionsRow(productId: Int, productOptionId: Int, name: String, optionSequence: Int, images: String)
+   *  @param optionSequence Database column option_sequence SqlType(INT) */
+  case class ProductOptionsRow(productId: Int, productOptionId: Int, name: String, optionSequence: Int)
   /** GetResult implicit for fetching ProductOptionsRow objects using plain SQL queries */
   implicit def GetResultProductOptionsRow(implicit e0: GR[Int], e1: GR[String]): GR[ProductOptionsRow] = GR{
     prs => import prs._
-    ProductOptionsRow.tupled((<<[Int], <<[Int], <<[String], <<[Int], <<[String]))
+    ProductOptionsRow.tupled((<<[Int], <<[Int], <<[String], <<[Int]))
   }
   /** Table description of table product_options. Objects of this class serve as prototypes for rows in queries. */
   class ProductOptions(_tableTag: Tag) extends profile.api.Table[ProductOptionsRow](_tableTag, Some("myshop2"), "product_options") {
-    def * = (productId, productOptionId, name, optionSequence, images) <> (ProductOptionsRow.tupled, ProductOptionsRow.unapply)
+    def * = (productId, productOptionId, name, optionSequence) <> (ProductOptionsRow.tupled, ProductOptionsRow.unapply)
     /** Maps whole row to an option. Useful for outer joins. */
-    def ? = ((Rep.Some(productId), Rep.Some(productOptionId), Rep.Some(name), Rep.Some(optionSequence), Rep.Some(images))).shaped.<>({r=>import r._; _1.map(_=> ProductOptionsRow.tupled((_1.get, _2.get, _3.get, _4.get, _5.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+    def ? = ((Rep.Some(productId), Rep.Some(productOptionId), Rep.Some(name), Rep.Some(optionSequence))).shaped.<>({r=>import r._; _1.map(_=> ProductOptionsRow.tupled((_1.get, _2.get, _3.get, _4.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
 
     /** Database column product_id SqlType(INT) */
     val productId: Rep[Int] = column[Int]("product_id")
@@ -296,8 +295,6 @@ trait Tables {
     val name: Rep[String] = column[String]("name", O.Length(40,varying=true))
     /** Database column option_sequence SqlType(INT) */
     val optionSequence: Rep[Int] = column[Int]("option_sequence")
-    /** Database column images SqlType(VARCHAR), Length(2000,true) */
-    val images: Rep[String] = column[String]("images", O.Length(2000,varying=true))
 
     /** Foreign key referencing Products (database name product_options_ibfk_1) */
     lazy val productsFk = foreignKey("product_options_ibfk_1", productId, Products)(r => r.productId, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
@@ -312,10 +309,10 @@ trait Tables {
    *  @param price Database column price SqlType(INT UNSIGNED), Default(0)
    *  @param categoryCode Database column category_code SqlType(VARCHAR), Length(20,true), Default()
    *  @param detailInfo Database column detail_info SqlType(VARCHAR), Length(200,true), Default()
-   *  @param thumbnail Database column thumbnail SqlType(VARCHAR), Length(1000,true), Default()
+   *  @param thumbnail Database column thumbnail SqlType(LONGTEXT), Length(2147483647,true)
    *  @param reviewCount Database column review_count SqlType(INT), Default(0)
    *  @param rating Database column rating SqlType(INT), Default(0) */
-  case class ProductsRow(productId: Int, name: String, sellerId: String, price: Long = 0L, categoryCode: String = "", detailInfo: String = "", thumbnail: String = "", reviewCount: Int = 0, rating: Int = 0)
+  case class ProductsRow(productId: Int, name: String, sellerId: String, price: Long = 0L, categoryCode: String = "", detailInfo: String = "", thumbnail: String, reviewCount: Int = 0, rating: Int = 0)
   /** GetResult implicit for fetching ProductsRow objects using plain SQL queries */
   implicit def GetResultProductsRow(implicit e0: GR[Int], e1: GR[String], e2: GR[Long]): GR[ProductsRow] = GR{
     prs => import prs._
@@ -339,8 +336,8 @@ trait Tables {
     val categoryCode: Rep[String] = column[String]("category_code", O.Length(20,varying=true), O.Default(""))
     /** Database column detail_info SqlType(VARCHAR), Length(200,true), Default() */
     val detailInfo: Rep[String] = column[String]("detail_info", O.Length(200,varying=true), O.Default(""))
-    /** Database column thumbnail SqlType(VARCHAR), Length(1000,true), Default() */
-    val thumbnail: Rep[String] = column[String]("thumbnail", O.Length(1000,varying=true), O.Default(""))
+    /** Database column thumbnail SqlType(LONGTEXT), Length(2147483647,true) */
+    val thumbnail: Rep[String] = column[String]("thumbnail", O.Length(2147483647,varying=true))
     /** Database column review_count SqlType(INT), Default(0) */
     val reviewCount: Rep[Int] = column[Int]("review_count", O.Default(0))
     /** Database column rating SqlType(INT), Default(0) */
