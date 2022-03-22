@@ -8,31 +8,35 @@ import play.api.libs.json._
 import play.libs.F.Tuple
 import scala.concurrent.{ExecutionContext, Future, blocking}
 import scala.util.{Failure, Success, Try}
-import services.SellerService
+import services.{ProductService, SellerService}
 import slick.jdbc.JdbcProfile
 import slick.jdbc.MySQLProfile.api._
 import slick.jdbc.MySQLProfile
 import java.security.MessageDigest
 import java.math.BigInteger
+import java.nio.file.Paths
+import scala.language.postfixOps
 
 @Singleton
 class SellerController @Inject() (protected val dbConfigProvider: DatabaseConfigProvider,
 								cc: ControllerComponents)(implicit ec: ExecutionContext)
 		extends AbstractController(cc) with HasDatabaseConfigProvider[JdbcProfile] {
 	private val service = new SellerService(db)
+	private val productService = new ProductService(db)
 	
 	implicit val sellerReads = Json.reads[SellerDto]
 	implicit val itemReads = Json.reads[ProductOptionItemDto]
+	implicit val imageRead = Json.reads[ProductImageDto]
 	implicit val optionReads = Json.reads[ProductOptionDto]
 	implicit val productReads = Json.reads[ProductDto]
 	
 	implicit val itemWrites = Json.writes[ProductOptionItemDto]
+	implicit val imageWrite = Json.writes[ProductImageDto]
 	implicit val optionWrites = Json.writes[ProductOptionDto]
 	implicit val productWrites = Json.writes[ProductDto]
 	
 	private def withSessionId(f: String => Future[Result])(implicit request: Request[AnyContent]): Future[Result] =
 		request.session.get("sellerId").map(sellerId => f(sellerId)).getOrElse(Future.successful(Ok(Json.toJson(Seq.empty[String]))))
-	
 	
 	private def withJsonBody[A](f: A => Future[Result])(implicit request: Request[AnyContent], reads: Reads[A]): Future[Result] = {
 		println(request.body.asJson)
@@ -99,7 +103,9 @@ class SellerController @Inject() (protected val dbConfigProvider: DatabaseConfig
 	
 	def productRegisterPage = Action.async { implicit request =>
 		withSessionId { sellerId =>
-			Future(Ok(views.html.seller.product.register(sellerId)))
+			productService.getMainCategories map { categories =>
+				Future(Ok(views.html.seller.product.register(categories, sellerId)))
+			} flatten
 		}
 	}
 	
