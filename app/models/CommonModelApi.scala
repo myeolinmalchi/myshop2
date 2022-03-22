@@ -15,9 +15,13 @@ import java.math.BigInteger
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
 import common.encryption._
+import java.awt.image.BufferedImage
+import java.io.{ByteArrayInputStream, File}
+import javax.imageio.ImageIO
 import play.api.libs.json.Json
 import scala.language.postfixOps
 import slick.lifted.AbstractTable
+import org.apache.commons.codec.binary.Base64
 
 // TODO
 //  - db insertion 구현
@@ -36,6 +40,6 @@ class CommonModelApi(db: Database)(implicit ec: ExecutionContext) {
 			case Some(value) => Some(g(value))
 			case None => None
 		})
-	
+		
 	def insertWithId = ???
 }
