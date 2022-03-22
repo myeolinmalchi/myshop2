@@ -53,55 +53,88 @@ function orThrow(element, query) {
     } else return value
 }
 
-function addProduct(sellerId) { try {
-    const optionList = [...document.querySelectorAll('div.option')].map((option, index) => {
-        const itemList = [...option.querySelectorAll('div.item')].map((item, index) => {
+function getBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+}
+
+async function addProduct(sellerId) {
+    try {
+        const imagesDiv = document.querySelector('div.images')
+        const imageStrings = await Promise.all(
+            [...imagesDiv.querySelectorAll('input[name="image"]')].map((image, index) => {
+                return getBase64(image.files[0]).then(result => result.toString())
+        }))
+
+        const imageList = imageStrings.map((src, index) => {
             return {
-                productOptionId: 0,
-                productOptionItemId: 0,
-                name: orThrow(item, 'input[name="name"]'),
-                surcharge: Number(orThrow(item, 'input[name="surcharge"]')),
-                stock: Number(orThrow(item, 'input[name="stock"]')),
-                itemSequence: index + 1
+                productId: 0,
+                productImageId: 0,
+                image: src,
+                sequence: index + 1
             }
         })
-        return {
+
+
+        const optionList = [...document.querySelectorAll('div.option')].map((option, index) => {
+            const itemList = [...option.querySelectorAll('div.item')].map((item, index) => {
+                return {
+                    productOptionId: 0,
+                    productOptionItemId: 0,
+                    name: orThrow(item, 'input[name="name"]'),
+                    surcharge: Number(orThrow(item, 'input[name="surcharge"]')),
+                    stock: Number(orThrow(item, 'input[name="stock"]')),
+                    itemSequence: index + 1
+                }
+            })
+            return {
+                productId: 0,
+                productOptionId: 0,
+                name: orThrow(option, 'input[name="name"]'),
+                optionSequence: index + 1,
+                itemList: itemList
+            }
+        })
+
+        const categories = document.querySelector('select.last-category')
+        const category = categories.options[categories.selectedIndex].value
+        const product = {
             productId: 0,
-            productOptionId: 0,
-            name: orThrow(option, 'input[name="name"]'),
-            images: orThrow(option, 'input[name="images'),
-            optionSequence: index + 1,
-            itemList: itemList
+            name: orThrow(document, 'input[name="name"]'),
+            sellerId: sellerId,
+            price: Number(orThrow(document, 'input[name="price"]')),
+            categoryCode: category,
+            detailInfo: orThrow(document, 'input[name="detailInfo"]'),
+            thumbnail: await getBase64(document.querySelector('input[name="thumbnail"]').files[0]),
+            reviewCount: 0,
+            rating: 0,
+            optionList: await Promise.all(optionList),
+            imageList: imageList
         }
-    })
-    const product = {
-        productId: 0,
-        name: orThrow(document, 'input[name="name"]'),
-        sellerId: sellerId,
-        price: Number(orThrow(document, 'input[name="price"]')),
-        categoryCode: orThrow(document, 'input[name="category"]'),
-        detailInfo: orThrow(document, 'input[name="detailInfo"]'),
-        thumbnail: orThrow(document, 'input[name="thumbnail"]'),
-        reviewCount: 0,
-        rating: 0,
-        optionList: optionList
+        fetch("/seller/product", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Data-Type": "json"
+            },
+            body: JSON.stringify(product)
+        })
+            .then(response => response.json())
+            .then(json => {
+                if (json === true) {
+                    alert("상품이 등록되었습니다.")
+                    location.href = '/seller/product'
+                } else alert(json.error)
+            });
+    } catch (e) {
+        alert(e)
+        console.log(e)
     }
-    fetch("/seller/product", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Data-Type": "json"
-        },
-        body: JSON.stringify(product)
-    })
-        .then(response => response.json())
-        .then(json => {
-            if(json === true) {
-                alert("상품이 등록되었습니다.")
-                location.href='/seller/product'
-            } else alert(json.error)
-        });
-} catch(e) { alert(e) } }
+}
 
 function addOption(element){
     let temp = document.querySelector("div.hidden-option").cloneNode(true)
@@ -116,6 +149,14 @@ function addItem(element){
     temp.classList.replace('hidden-item', 'item')
 
     element.parentNode.appendChild(temp)
+}
+
+function addImage(){
+    let temp = document.querySelector("div.hidden-image").cloneNode(true)
+    temp.classList.replace('hidden-image', 'image')
+
+    let images = document.querySelector("div.images")
+    images.appendChild(temp)
 }
 
 class Stack {
@@ -139,17 +180,18 @@ class Stack {
 const catStack = new Stack();
 
 function nextCategories(target) {
+
     const code = target.options[target.selectedIndex].value
     const newBox = document.querySelector('div.hidden-category').cloneNode(true)
-    cat.classList.replace('hidden-category','category')
+    newBox.classList.replace('hidden-category','category')
 
     while(true){
         if(catStack.length() < code.length) break;
-        $(catStack.pop()).remove();
+        catStack.pop().remove()
     }
 
     fetch("/category/children", {
-        method: "GET",
+        method: "POST",
         headers: {
             "Content-Type": "application/json",
             "Data-Type": "json"
@@ -158,12 +200,19 @@ function nextCategories(target) {
     })
         .then(response => response.json())
         .then(json => {
-            [json].forEach((cat, index) => {
-                newBox.setAttribute('id', 'code')
-                newBox.querySelector('select.category')
-                    .append('<option value="'.concat(cat.code,'">',cat.name,'</option>'));
-            })
-            document.querySelector('div.category-aria')
-                .append(newBox)
+            console.log(json)
+            if(json !== null && json.length !==0){
+                json.forEach((cat, index) => {
+                    let option = document.createElement('option');
+                    option.setAttribute('value', cat[0])
+                    option.label = cat[1]
+                    newBox.setAttribute('class', 'category')
+                    newBox.querySelector('select.category').append(option)
+                    console.log(cat)
+                })
+                document.querySelector('div.category-aria').append(newBox)
+                catStack.push(newBox)
+            }
+            else target.className += ' last-category'
         })
 }
