@@ -51,4 +51,9 @@ GET     /seller/product/register        controllers.SellerController.productRegi
 POST    /seller/product/register        controllers.SellerController.addProduct
 
 # Map for search(/search)
-GET     /search/:code/:keyword                controllers.HomeController.search(code, keyword)
+GET     /search/:code/:keyword          controllers.HomeController.search(code, keyword)
+
+#Map for Category(/category)
+GET    /category                       controllers.CategoryController.getMainCategories
+POST     /category/children             controllers.CategoryController.getChildrens
+POST    /category/siblings                controllers.CategoryController.getSiblings
