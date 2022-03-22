@@ -1,6 +1,6 @@
 package dto
 
-import models.Tables.{ProductOptionItems, ProductOptions, Products}
+import models.Tables._
 import play.api.libs.json.Json
 
 object readAndWrites {
@@ -9,6 +9,9 @@ object readAndWrites {
 	
 	implicit val optionRead = Json.reads[ProductOptionDto]
 	implicit val optionWrite = Json.writes[ProductOptionDto]
+	
+	implicit val imageRead = Json.reads[ProductImageDto]
+	implicit val imageWrite = Json.writes[ProductImageDto]
 	
 	implicit lazy val productRead = Json.reads[ProductDto]
 	implicit lazy val productWrite = Json.writes[ProductDto]
@@ -23,7 +26,8 @@ case class ProductDto(productId: Int,
 					  thumbnail: String,
 					  reviewCount: Int,
 					  rating: Int,
-					  var optionList: List[ProductOptionDto] = Nil) {
+					  var optionList: List[ProductOptionDto] = Nil,
+					  var imageList: List[ProductImageDto] = Nil) {
 	
 	def setOptions(options: List[ProductOptionDto]): ProductDto = {
 		this.optionList = options
@@ -31,11 +35,20 @@ case class ProductDto(productId: Int,
 	}
 }
 
+case class ProductImageDto(productId: Int,
+						   productImageId: Int,
+						   image: String,
+						   sequence: Int)
+
+object ProductImageDto {
+	def newInstance(img: ProductImages#TableElementType): ProductImageDto =
+		new ProductImageDto(img.productId, img.productImageId, img.image, img.sequence)
+}
+
 case class ProductOptionDto(productId: Int,
 							productOptionId: Int,
 							name: String,
 							optionSequence: Int,
-							images: String,
 							var itemList: List[ProductOptionItemDto] = Nil){
 	
 	def setItems(items: List[ProductOptionItemDto]): ProductOptionDto = {
@@ -54,12 +67,12 @@ case class ProductOptionItemDto(productOptionId: Int,
 object ProductDto {
 	def newInstance(p: Products#TableElementType) =
 		new ProductDto(p.productId, p.name, p.sellerId, p.price.toInt, p.categoryCode, p.detailInfo, p.thumbnail, p
-				.reviewCount, p.rating, Nil)
+				.reviewCount, p.rating, Nil, Nil)
 }
 
 object ProductOptionDto {
 	def newInstance(o: ProductOptions#TableElementType) =
-		new ProductOptionDto(o.productId, o.productOptionId, o.name, o.optionSequence, o.images, Nil)
+		new ProductOptionDto(o.productId, o.productOptionId, o.name, o.optionSequence, Nil)
 	
 }
 
