@@ -50,7 +50,6 @@ class ProductModel(db: Database)(implicit ec: ExecutionContext) {
 			case Nil =>
 				Future.failed(new NoSuchElementException(s"[${p.name}] 메인옵션은 필수항목입니다."))
 			case _ => {
-				println("option exists")
 				val query = (Products returning Products.map(_.productId))
 				val row = ProductsRow(0, p.name, p.sellerId, p.price, p.categoryCode, p.detailInfo, p.thumbnail, 0, 0)
 				db run (query += row).asTry map {
@@ -60,13 +59,20 @@ class ProductModel(db: Database)(implicit ec: ExecutionContext) {
 			}
 		}
 		
+		def insertImage(i: ProductImageDto, productId: Future[Int]): Future[Int] = productId transform {
+			case Success(id: Int) =>
+				val row = ProductImagesRow(id, -1, i.image, i.sequence)
+				Try(db.run(ProductImages += row))
+			case Failure(e) => Try(Future.failed(e))
+		} flatMap(identity)
+		
 		def insertOption(o: ProductOptionDto, productId: Future[Int]): Future[Int] = productId transform {
 			case Success(id: Int) =>
 				o.itemList match {
 					case Nil => Failure(new Exception("error"))
 					case _ =>
 						val query = (ProductOptions returning ProductOptions.map(_.productOptionId))
-						val row = ProductOptionsRow(id, 0, o.name, o.optionSequence, o.images)
+						val row = ProductOptionsRow(id, 0, o.name, o.optionSequence)
 						Try(db.run(query += row))
 				}
 			case Failure(e) => Try(Future.failed(e))
@@ -79,12 +85,20 @@ class ProductModel(db: Database)(implicit ec: ExecutionContext) {
 			case Failure(e) => Try(Future.failed(e))
 		} flatMap(identity)
 		
-		val productId = insertProduct
-		Future.sequence(p.optionList flatMap { option =>
-			val optionId = insertOption(option, productId)
-			option.itemList map { item =>
-				insertItem(item, optionId)
+		Future(p) map { product =>
+			val productId = insertProduct
+			product.optionList foreach { option =>
+				val optionId = insertOption(option, productId)
+				option.itemList foreach { item => insertItem(item, optionId) }
 			}
-		})
+			product.imageList foreach { image => insertImage(image, productId)}
+			product
+		}
+		
+//		val productId = insertProduct
+//		Future.sequence(p.optionList flatMap { option =>
+//			val optionId = insertOption(option, productId)
+//			option.itemList map { item => insertItem(item, optionId) }
+//		})
 	}
 }
