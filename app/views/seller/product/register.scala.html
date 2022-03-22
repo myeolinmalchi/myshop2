@@ -1,4 +1,4 @@
-@(sellerId: String)(implicit request: RequestHeader, flash: Flash)
+@(categories: List[(String, String)], sellerId: String)(implicit request: RequestHeader, flash: Flash)
 
 @main("product register") {
     <style>
@@ -8,11 +8,24 @@
             margin: 10px;
             width: 50%;
         }
+        .image-aria {
+            border: solid black 2px;
+            padding: 10px;
+            margin: 10px;
+            width: 50%;
+        }
+        .hidden-category {
+            display: none;
+        }
 
         .hidden-option {
             display : none;
         }
         .hidden-item {
+            display : none;
+        }
+
+        .hidden-image {
             display : none;
         }
 
@@ -30,15 +43,40 @@
         price: <input type="number" name="price" id="price"/>
         <br>
 
-        <div>
-
+        <div class="hidden-category">
+            <select class="category" onchange="nextCategories(this)">
+                <option selected>분류</option>
+            </select>
         </div>
 
-        category: <input type="text" name="category" id="category"/>
+        category
+        <div class="category-aria">
+            <div class="category">
+                <select id="" class="category" onchange="nextCategories(this)">
+                    <option selected>분류</option>
+                    @for(category <- categories) {
+                        <option value="@category._1">@category._2</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="image-aria">
+            <div class="hidden-image">
+                image: <input type="file" name="image">
+            </div>
+            <div class="images">
+                <input type="button" style="margin-bottom:5px" onclick="addImage()" value="이미지 추가"><br>
+                <div class="image">
+                    image: <input type="file" name="image"/> <br>
+                </div>
+            </div>
+        </div>
+
         <br>
         detailInfo: <input type="text" name="detailInfo" id="detailInfo"/>
         <br>
-        thumbnail: <input type="text" name="thumbnail" id="thumbnail"/>
+        thumbnail: <input type="file" name="thumbnail" id="thumbnail"/>
         <br>
 
         <input type="button" onclick="addOption(this)" value = "옵션 추가"/>
@@ -48,7 +86,6 @@
 
         <div class="hidden-option">
             optionName: <input type="text" name="name" id="name"/> <br>
-            optionImages: <input type="text" name="images" id="images"/>
 
             <input type="button" onclick="addItem(this)" value = "항목 추가"/> <br><br>
             <div class="item">
@@ -66,8 +103,6 @@
 
         <div class="main-option option">
             optionName: <input type="text" name="name" id="name"/> <br>
-            optionImages: <input type="text" name="images" id="images"/>
-
             <input type="button" onclick="addItem(this)" value = "항목 추가"/> <br><br>
             <div class="item">
                 itemName: <input type="text" name="name" id="name"/>
