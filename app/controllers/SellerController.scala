@@ -39,12 +39,10 @@ class SellerController @Inject() (protected val dbConfigProvider: DatabaseConfig
 		request.session.get("sellerId").map(sellerId => f(sellerId)).getOrElse(Future.successful(Ok(Json.toJson(Seq.empty[String]))))
 	
 	private def withJsonBody[A](f: A => Future[Result])(implicit request: Request[AnyContent], reads: Reads[A]): Future[Result] = {
-		println(request.body.asJson)
 		request.body.asJson.map { body =>
 			Json.fromJson[A](body) match {
 				case JsSuccess(a, path) => f(a)
 				case e @JsError(_) => {
-					println(e.toString)
 					Future.successful(Redirect(routes.SellerController.index))
 				}
 			}
