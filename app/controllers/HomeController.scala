@@ -41,7 +41,12 @@ class HomeController @Inject() (protected val dbConfigProvider: DatabaseConfigPr
   }
     
     def search(code: String, keyword: String) = Action.async { implicit request =>
-        productService searchProducts(keyword, code) transform {
+        val codeEnc = code match {
+            case "0" => ""
+            case s: String => s
+        }
+        
+        productService searchProducts(keyword, codeEnc) transform {
             case Success(products) => Try(Ok(Json.toJson(products)))
             case Failure(e) => Try(Ok(Json.toJson(Map("error" -> e.getMessage))))
         }
