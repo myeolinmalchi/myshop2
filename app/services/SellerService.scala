@@ -92,11 +92,13 @@ class SellerService(db: Database)(implicit ec: ExecutionContext) {
 		sellerModel getSellerByEmail(email) map (_ map(_.sellerId))
 		
 	def getProductList(implicit sellerId: String): Future[List[ProductDto]] =
-		productModel.getProductList(product => product.sellerId === sellerId)
+		productModel.getProductsWithAll(product => product.sellerId === sellerId)
 	
-	def addProduct(implicit sellerId: String, p: ProductDto): Future[_] = productModel.addProduct
+	def addProduct(implicit sellerId: String, p: ProductDto): Future[_] =
+		productModel.insertProductWithAll(p) flatMap productModel.insertProductStock
+	
 	
 	def searchProducts(keyword: String): Future[List[ProductDto]] = {
-		productModel getProductList { product => product.name like s"%${keyword}%" }
+		productModel getProductsWithAll { product => product.name like s"%${keyword}%" }
 	}
 }
