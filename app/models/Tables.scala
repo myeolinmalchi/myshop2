@@ -14,7 +14,7 @@ trait Tables {
   import slick.jdbc.{GetResult => GR}
 
   /** DDL for all tables. Call .create to execute. */
-  lazy val schema: profile.SchemaDescription = Array(CartDetails.schema, Carts.schema, Categories.schema, OrderDetails.schema, Orders.schema, ProductImages.schema, ProductOptionItems.schema, ProductOptions.schema, Products.schema, Qnas.schema, Reviews.schema, Sellers.schema, TempProductOptionItems.schema, TempProductOptions.schema, TempProducts.schema, UserAddresses.schema, Users.schema).reduceLeft(_ ++ _)
+  lazy val schema: profile.SchemaDescription = Array(CartDetails.schema, Carts.schema, Categories.schema, OrderDetails.schema, Orders.schema, ProductImages.schema, ProductOptionItems.schema, ProductOptions.schema, Products.schema, ProductStock.schema, Qnas.schema, Reviews.schema, Sellers.schema, TempProductOptionItems.schema, TempProductOptions.schema, TempProducts.schema, UserAddresses.schema, Users.schema).reduceLeft(_ ++ _)
   @deprecated("Use .schema instead of .ddl", "3.0")
   def ddl = schema
 
@@ -351,6 +351,35 @@ trait Tables {
   }
   /** Collection-like TableQuery object for table Products */
   lazy val Products = new TableQuery(tag => new Products(tag))
+
+  /** Entity class storing rows of table ProductStock
+   *  @param productStockId Database column product_stock_id SqlType(INT), AutoInc, PrimaryKey
+   *  @param parentId Database column parent_id SqlType(INT)
+   *  @param name Database column name SqlType(VARCHAR), Length(50,true)
+   *  @param depth Database column depth SqlType(INT) */
+  case class ProductStockRow(productStockId: Int, parentId: Int, name: String, depth: Int)
+  /** GetResult implicit for fetching ProductStockRow objects using plain SQL queries */
+  implicit def GetResultProductStockRow(implicit e0: GR[Int], e1: GR[String]): GR[ProductStockRow] = GR{
+    prs => import prs._
+    ProductStockRow.tupled((<<[Int], <<[Int], <<[String], <<[Int]))
+  }
+  /** Table description of table product_stock. Objects of this class serve as prototypes for rows in queries. */
+  class ProductStock(_tableTag: Tag) extends profile.api.Table[ProductStockRow](_tableTag, Some("myshop2"), "product_stock") {
+    def * = (productStockId, parentId, name, depth) <> (ProductStockRow.tupled, ProductStockRow.unapply)
+    /** Maps whole row to an option. Useful for outer joins. */
+    def ? = ((Rep.Some(productStockId), Rep.Some(parentId), Rep.Some(name), Rep.Some(depth))).shaped.<>({r=>import r._; _1.map(_=> ProductStockRow.tupled((_1.get, _2.get, _3.get, _4.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+
+    /** Database column product_stock_id SqlType(INT), AutoInc, PrimaryKey */
+    val productStockId: Rep[Int] = column[Int]("product_stock_id", O.AutoInc, O.PrimaryKey)
+    /** Database column parent_id SqlType(INT) */
+    val parentId: Rep[Int] = column[Int]("parent_id")
+    /** Database column name SqlType(VARCHAR), Length(50,true) */
+    val name: Rep[String] = column[String]("name", O.Length(50,varying=true))
+    /** Database column depth SqlType(INT) */
+    val depth: Rep[Int] = column[Int]("depth")
+  }
+  /** Collection-like TableQuery object for table ProductStock */
+  lazy val ProductStock = new TableQuery(tag => new ProductStock(tag))
 
   /** Entity class storing rows of table Qnas
    *  @param productId Database column product_id SqlType(INT), Default(None)
