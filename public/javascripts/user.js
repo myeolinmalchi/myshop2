@@ -57,3 +57,16 @@ function cartList(){
         .then(response => response.json())
         .then(data => console.log(data))
 }
+
+function search(){
+    const category = document.querySelector("select.category")
+    const code = category.options[category.selectedIndex].value
+    const keyword = document.querySelector("input[name='keyword']").value
+
+
+    fetch("/search/"+code+"/"+keyword)
+        .then(response => response.json())
+        .then(json => {
+            console.log(json)
+        });
+}
