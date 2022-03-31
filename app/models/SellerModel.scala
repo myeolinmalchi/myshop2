@@ -1,23 +1,12 @@
 package models
 
-import scala.concurrent.{ExecutionContext, Future}
-import slick.lifted.AbstractTable
-import scala.concurrent.ExecutionContext
+import common.encryption._
 import dto._
 import javax.inject._
-import scala.concurrent.{ExecutionContext, Future}
-import slick.jdbc.MySQLProfile.api._
 import models.Tables._
-import scala.collection.mutable.Map
-import scala.util.{Failure, Success, Try}
-import java.security.MessageDigest
-import java.math.BigInteger
-import javax.crypto.Cipher
-import javax.crypto.spec.SecretKeySpec
-import common.encryption._
-import play.api.libs.json.Json
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
-import slick.lifted.AbstractTable
+import slick.jdbc.MySQLProfile.api._
 
 @Singleton
 class SellerModel(db: Database)(implicit ec: ExecutionContext) {
