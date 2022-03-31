@@ -15,9 +15,12 @@ object readAndWrites {
 	
 	implicit lazy val productRead = Json.reads[ProductDto]
 	implicit lazy val productWrite = Json.writes[ProductDto]
+	
+	implicit val cartRead = Json.reads[CartDto]
+	implicit val cartWrite = Json.writes[CartDto]
 }
 
-case class ProductDto(productId: Int,
+case class ProductDto(var productId: Int,
 					  name: String,
 					  sellerId: String,
 					  price: Int,
@@ -33,20 +36,35 @@ case class ProductDto(productId: Int,
 		this.optionList = options
 		this
 	}
+	
+	def setImages(images: List[ProductImageDto]): ProductDto = {
+		this.imageList = images
+		this
+	}
+	
+	def setProductId(id: Int): ProductDto = {
+		this.productId = id
+		this
+	}
 }
 
-case class ProductImageDto(productId: Int,
+case class ProductImageDto(var productId: Int,
 						   productImageId: Int,
 						   image: String,
-						   sequence: Int)
+						   sequence: Int) {
+	def setProductId(id: Int): ProductImageDto = {
+		this.productId = id
+		this
+	}
+}
 
 object ProductImageDto {
 	def newInstance(img: ProductImages#TableElementType): ProductImageDto =
 		new ProductImageDto(img.productId, img.productImageId, img.image, img.sequence)
 }
 
-case class ProductOptionDto(productId: Int,
-							productOptionId: Int,
+case class ProductOptionDto(var productId: Int,
+							var productOptionId: Int,
 							name: String,
 							optionSequence: Int,
 							var itemList: List[ProductOptionItemDto] = Nil){
@@ -55,14 +73,28 @@ case class ProductOptionDto(productId: Int,
 		this.itemList = items
 		this
 	}
+	
+	def setProductId(id: Int): ProductOptionDto = {
+		this.productId = id
+		this
+	}
+	
+	def setOptionId(id: Int): ProductOptionDto = {
+		this.productOptionId = id
+		this
+	}
 }
 
-case class ProductOptionItemDto(productOptionId: Int,
+case class ProductOptionItemDto(var productOptionId: Int,
 							   productOptionItemId: Int,
 							   name: String,
 							   itemSequence: Int,
-							   surcharge: Int,
-							   stock: Int)
+							   surcharge: Int){
+	def setOptionId(id: Int): ProductOptionItemDto = {
+		this.productOptionId = id
+		this
+	}
+}
 
 object ProductDto {
 	def newInstance(p: Products#TableElementType) =
@@ -78,6 +110,5 @@ object ProductOptionDto {
 
 object ProductOptionItemDto {
 	def newInstance(i: ProductOptionItems#TableElementType) =
-		new ProductOptionItemDto(i.productOptionId, i.productOptionItemId, i.name, i.itemSequence, i.surcharge, i
-				.stock)
+		new ProductOptionItemDto(i.productOptionId, i.productOptionItemId, i.name, i.itemSequence, i.surcharge)
 }
