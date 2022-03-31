@@ -5,23 +5,25 @@ import play.api.libs.json.Json
 import models.Tables._
 
 case class CartDto(userId: String,
-				   cartId: Int,
+				   var cartId: Int,
 				   name: String,
-					productId: Int,
-					price: Int,
-					quantity: Int,
-					addedDate: Date)
-
-object CartDto{
-	def apply(cart: Carts#TableElementType) =
-		new CartDto(cart.userId, cart.cartId, cart.name, cart.productId, cart.price, cart.quantity, cart.addedDate)
+				   productId: Int,
+				   price: Int,
+				   quantity: Int,
+				   addedDate: Date,
+				   var itemList: List[ProductOptionItemDto]=Nil) {
+	def setList(itemList: List[ProductOptionItemDto]): CartDto = {
+		this.itemList = itemList
+		this
+	}
+	
+	def setId(id: Int) = {
+		this.cartId = id
+		this
+	}
 }
 
-//object ReadsAndWrites {
-//	implicit val cartDtoReads = Json.reads[CartDto]
-//	implicit val cartDtoWrites = Json.writes[CartDto]
-//}
-
-
-
-
+object CartDto{
+	def newInstance(cart: Carts#TableElementType) =
+		new CartDto(cart.userId, cart.cartId, cart.name, cart.productId, cart.price, cart.quantity, cart.addedDate, Nil)
+}
