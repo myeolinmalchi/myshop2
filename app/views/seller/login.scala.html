@@ -2,14 +2,28 @@
 
 @main("login") {
     <script src="@routes.Assets.versioned("javascripts/seller.js")" type="text/javascript"></script>
-    <div>
-        <h3>Seller Login Page</h3>
-        <br>
-        ID : <input type="text" name="sellerId" id="sellerId">
-        <br>
-        PW: <input type="password" name="sellerPw" id="sellerPw">
-        <br>
-        <input type="button" onclick="login()" value = "로그인">
-    </div>
+    <div class="container mt-5 p-5">
+        <div class="row w-100 mx-auto my-3">
+            <span class="col text-center w-100 h2">로그인</span>
+        </div>
 
+        <div class="row mx-auto form-floating my-3" style="width:30%">
+            <input type="text" class="form-control" id="sellerId" placeholder="아이디" name="sellerId">
+            <label for="sellerId">아이디</label>
+        </div>
+        <div class="row mx-auto form-floating my-3" style="width:30%">
+            <input type="password" class="form-control" id="sellerPw" placeholder="비밀번호" name="sellerPw">
+            <label for="sellerPw">비밀번호</label>
+        </div>
+
+        <div class="row mx-auto my-3" style="width:30%">
+            <button type="button" onclick="login()" class="col btn btn-primary me-2">로그인</button>
+            <button type="button" class="col btn btn-outline-primary" onclick="location.href='/'">돌아가기</button>
+        </div>
+
+        <div class="row mx-auto my-3" style="width:30%">
+            <button type="button" class="col btn btn-lg btn-success"
+                    onclick="location.href='/seller/register'">회원가입</button>
+        </div>
+    </div>
 }
