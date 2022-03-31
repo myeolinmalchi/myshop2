@@ -12,9 +12,10 @@ import services.UserService
 import slick.jdbc.JdbcProfile
 import slick.jdbc.MySQLProfile.api._
 import slick.jdbc.MySQLProfile
-
 import java.security.MessageDigest
 import java.math.BigInteger
+import java.time.LocalDateTime
+import models.{SellerSessionModel, UserSessionModel}
 
 @Singleton
 class UserController @Inject() (protected val dbConfigProvider: DatabaseConfigProvider,
@@ -23,8 +24,13 @@ class UserController @Inject() (protected val dbConfigProvider: DatabaseConfigPr
 	private val service = new UserService(db)
 
 	implicit val userReads = Json.reads[UserDto]
+	implicit val itemReads = Json.reads[ProductOptionItemDto]
+	implicit val cartReads = Json.reads[CartDto]
+	
+	implicit val itemWrites = Json.writes[ProductOptionItemDto]
 	implicit val cartWrites = Json.writes[CartDto]
 	implicit val addrWrites = Json.writes[AddressDto]
+	implicit val userWrites = Json.writes[UserDto]
 
 	private def withSessionUserid(f: String => Future[Result])(implicit request: Request[AnyContent]): Future[Result] =
 		request.session.get("userId").map(userId => f(userId)).getOrElse(Future.successful(Ok(Json.toJson(Seq.empty[String]))))
@@ -42,25 +48,56 @@ class UserController @Inject() (protected val dbConfigProvider: DatabaseConfigPr
 		}.getOrElse((Future.successful(Redirect(routes.UserController.registerPage))))
 	}
 	
-
-	def loginPage = Action { implicit request =>
-		Ok(views.html.login())
+	private def extractSeller(req: RequestHeader): Future[Option[UserDto]] = {
+		val sessionTokenOpt = req.session.get("sessionToken")
+		def swap[M](x: Option[Future[M]]): Future[Option[M]] =
+			Future.sequence(Option.option2Iterable(x)).map(_.headOption)
+		swap (sessionTokenOpt
+				.flatMap(token => UserSessionModel.getSession(token))
+				.filter(_.expiration.isAfter(LocalDateTime.now()))
+				.map(_.sellerId)
+				.map(service.getUser))
+	}
+	
+	private def withUser[T](block: UserDto => Future[Result])
+							 (implicit request: Request[AnyContent]): Future[Result] =
+		extractSeller(request) flatMap {
+			case Some(user) => block(user)
+			case None => Future(Unauthorized(views.html.seller.no_auth()))
+		}
+		
+	private def withoutUser(block: => Future[Result])
+						   (implicit request: Request[AnyContent]): Future[Result] =
+		extractSeller(request) flatMap {
+			case None => block
+			case Some(_) => Future(Unauthorized(views.html.seller.no_auth()))
+		}
+	
+		
+	def loginPage = Action.async { implicit request =>
+		withoutUser {
+			Future(Ok(views.html.login()))
+		}
 	}
 	
 	def login = Action.async { implicit request =>
-		withJsonBody[UserDto] { user =>
-			println("userId: "+user.userId)
-			service.login(user.userId, user.userPw).map {
-				case Some(able) =>
-					if(able) Ok(Json.toJson(true)).withSession("userId" -> user.userId)
-					else Ok(Json.toJson(Map("error"->"비밀번호가 일치하지 않습니다.")))
-				case None => Ok(Json.toJson(Map("error" -> "존재하지 않는 계정입니다.")))
+		withoutUser {
+			withJsonBody[UserDto] { user =>
+				service.login(user.userId, user.userPw).map {
+					case Some(able) =>
+						if(able) {
+							val token = UserSessionModel.generateToken(user.userId, request.session)
+							Ok(Json.toJson(true)).withSession("sessionToken" -> token)
+						}
+						else Ok(Json.toJson(Map("error"->"비밀번호가 일치하지 않습니다.")))
+					case None => Ok(Json.toJson(Map("error" -> "존재하지 않는 계정입니다.")))
+				}
 			}
 		}
 	}
 	
-	def registerPage = Action { implicit request =>
-		Ok(views.html.register())
+	def registerPage = Action.async { implicit request =>
+		withoutUser{ Future(Ok(views.html.register())) }
 	}
 	
 	def register = Action async { implicit request =>
@@ -72,8 +109,11 @@ class UserController @Inject() (protected val dbConfigProvider: DatabaseConfigPr
 		}
 	}
 	
-	def logout = Action { implicit request =>
-		Redirect(routes.HomeController.index).withSession(request.session - "userId")
+	def logout = Action.async { implicit request =>
+		withUser[UserDto] { user =>
+			UserSessionModel.remSession(request.session)
+			Future(Redirect(routes.HomeController.index).withSession(request.session - "sessionToken"))
+		}
 	}
 	
 	def findUserPage = Action { Ok(views.html.findUser()) }
@@ -88,10 +128,24 @@ class UserController @Inject() (protected val dbConfigProvider: DatabaseConfigPr
 	}
 
 	def cartList = Action.async { implicit request =>
-		withSessionUserid { implicit userId => service.getCarts.map(cart => Ok(Json.toJson(cart))) }
+		withUser[UserDto] { user =>
+			service.getCarts(user.userId) transform {
+				case Success(result) => Try(Ok(views.html.cart_list(result.toList)))
+				case Failure(e) => Try(Ok(Json.toJson(Map("error" -> e.getMessage))))
+			}
+		}
 	}
 	
-	def addCart = ???
+	def addCart = Action.async { implicit request =>
+		withUser[UserDto] { user =>
+			withJsonBody[CartDto] {  cart =>
+				service.addCart(cart) transform {
+					case Success(result) => Try(Redirect(routes.UserController.cartList))
+					case Failure(e) => Try(Ok(Json.toJson(Map("error" -> e.getMessage))))
+				}
+			}
+		}
+	}
 
 	def addressList = Action.async { implicit request =>
 		withSessionUserid { implicit userId => service.getAddress.map(addr => Ok(Json.toJson(addr))) }
