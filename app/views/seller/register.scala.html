@@ -1,21 +1,46 @@
 @()(implicit request: RequestHeader, flash: Flash)
 
 @main("register") {
-    <div>
-        <h3>Seller Register Page</h3>
-        <br>
-        ID : <input type="text" name="sellerId" id="sellerId"/>
-        <br>
-        PW: <input type="password" name="sellerPw" id="sellerPw"/>
-        <br>
-        name: <input type="text" name="name" id="name"/>
-        <br>
-        email: <input type="text" name="email" id="email"/>
-        <br>
-        phone: <input type="text" name="phone" id="phone"/>
-        <br>
-        <input type="button" onclick="register()" value = "회원가입"/>
-    </div>
+    <div class="container mt-5 p-5">
+        <div class="row w-100 mx-auto my-3">
+            <span class="col text-center w-100 h2">회원가입</span>
+        </div>
 
+        <div class="row mx-auto form-floating my-3" style="width:30%">
+            <input type="text" class="form-control" id="sellerId" placeholder="아이디"
+            name="sellerId">
+            <label for="sellerId" class="form-label">아이디</label>
+            <div class="validation invalid-feedback"></div>
+        </div>
+        <div class="row mx-auto form-floating my-3" style="width:30%">
+            <input type="password" class="form-control" id="sellerPw" placeholder="비밀번호"
+            name="sellerPw">
+            <label for="sellerPw">비밀번호</label>
+            <div class="validation invalid-feedback"></div>
+        </div>
+        <div class="row mx-auto form-floating my-3" style="width:30%">
+            <input type="text" class="form-control" id="name" placeholder="이름"
+            name="name">
+            <label for="name">이름</label>
+            <div class="validation invalid-feedback"></div>
+        </div>
+        <div class="row mx-auto form-floating my-3" style="width:30%">
+            <input type="email" class="form-control" id="email" placeholder="이메일" value="myshop@@example.com"
+            name="email">
+            <label for="email" class="form-label">이메일</label>
+            <div class="validation invalid-feedback"></div>
+        </div>
+        <div class="row mx-auto form-floating my-3" style="width:30%">
+            <input type="text" class="form-control" id="phone" placeholder="전화번호" value="010-1234-1234"
+            name="phone">
+            <label for="phonenumber">전화번호</label>
+            <div class="validation invalid-feedback"></div>
+        </div>
+
+        <div class="row mx-auto my-3" style="width:30%">
+            <button type="button" onclick="register()" class="col btn btn-primary me-2">회원가입</button>
+            <button type="button" class="col btn btn-outline-primary" onclick="location.href='/seller'">돌아가기</button>
+        </div>
+    </div>
     <script src="@routes.Assets.versioned("javascripts/seller.js")"></script>
 }
