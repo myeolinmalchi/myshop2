@@ -16,6 +16,7 @@ GET     /assets/*file               controllers.Assets.versioned(path="/public",
 POST    /user/login                 controllers.UserController.login
 GET     /user/login                 controllers.UserController.loginPage
 
+
 GET     /user/logout                controllers.UserController.logout
 
 POST    /user/register              controllers.UserController.register
@@ -29,10 +30,10 @@ GET     /user/carts                 controllers.UserController.cartList
 #POST    /user/addresses             controllers.UserController.addAddress
 #GET     /user/addresses             controllers.UserController.addressList
 
-
 # Map for SellerController(/seller)
 GET     /seller                       controllers.SellerController.index
 
+# reqeust: userId, userPw => response: boolean
 POST    /seller/login                 controllers.SellerController.login
 GET     /seller/login                 controllers.SellerController.loginPage
 
@@ -45,15 +46,22 @@ GET     /seller/find                  controllers.SellerController.findSellerPag
 POST    /seller/find/id               controllers.SellerController.findId
 
 POST    /seller/product                 controllers.SellerController.addProduct
-GET     /seller/product                 controllers.SellerController.getProduct
-
+GET     /seller/product                 controllers.SellerController.getProducts
 GET     /seller/product/register        controllers.SellerController.productRegisterPage
 POST    /seller/product/register        controllers.SellerController.addProduct
 
+#GET     /seller/product/detail          controllers.SellerController.productDetail(product: dto.ProductDto)
+
+POST    /seller/product/stock           controllers.SellerController.getProductStock
+PUT     /seller/product/stock           controllers.SellerController.updateStock
+
 # Map for search(/search)
-GET     /search/:code/:keyword          controllers.HomeController.search(code, keyword)
+GET     /search/:code/:keyword controllers.SearchController.search(code, keyword, page: Option[Int], size: Option[Int], seq:Option[Int])
+GET     /product/detail/:productId       controllers.SearchController.productDetail(productId: Int)
 
 #Map for Category(/category)
-GET    /category                       controllers.CategoryController.getMainCategories
+GET     /category                       controllers.CategoryController.getMainCategories
+
+# request: categoryCode => response: List[categoryCode, name]
 POST     /category/children             controllers.CategoryController.getChildrens
 POST    /category/siblings                controllers.CategoryController.getSiblings
