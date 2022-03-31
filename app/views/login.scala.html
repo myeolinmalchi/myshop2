@@ -1,15 +1,46 @@
 @()(implicit request: RequestHeader, flash: Flash)
 
 @main("login") {
-    <script src="@routes.Assets.versioned("javascripts/user.js")" type="text/javascript"></script>
-    <div>
-        <h3>Login Page</h3>
-        <br>
-        ID : <input type="text" name="userId" id="userId">
-        <br>
-        PW: <input type="password" name="userPw" id="userPw">
-        <br>
-        <input type="button" onclick="login()" value = "로그인">
-    </div>
+    <link rel="stylesheet" href="@routes.Assets.versioned("/stylesheets/login_style.css")" />
+    <script src="https://kit.fontawesome.com/08d1af579d.js" crossorigin="anonymous"></script>
 
+    <div class="member_container">
+        <div class="wrapper">
+            <header class="member-header">
+                <div class="member-logo">
+                    <img src="@routes.Assets.versioned("/images/logo/logosmall2.png")" width="300" height="120">
+                </div>
+            </header>
+            <section class="login-input-section-wrap">
+                <div class="login-input-wrap">
+                    <div class="id_icon"><i class="fa fa-user"></i>
+                        <input type="text" placeholder="ID" id="userId" class="account">
+                    </div>
+                </div>
+                <div class="login-input-wrap password-wrap">
+                    <div class="pw_icon"><i class="fa fa-lock"></i>
+                        <input type="password" placeholder="Password" id="userPw" class="account"></div>
+                </div>
+                <div class="login-button-wrap">
+                    <button id="login" class="account">로그인</button>
+                    <p id="alert" class="account"></p>
+                </div>
+                <div class="sign-in-wrap">
+                    <button id="register">회원가입</button>
+                </div>
+                <div class="login-stay-sign-in">
+                    <div class="stay_signlogo">
+                        <i class="far fa-check-square"></i>
+                        <span>로그인 상태유지</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+        <footer>
+            <div class="copyright-wrap">
+                <span>Copyright © My shop Corp. All Rights Reserved.</span>
+            </div>
+        </footer>
+    </div>
+    <script src="@routes.Assets.versioned("javascripts/login.js")" type="text/javascript"></script>
 }
