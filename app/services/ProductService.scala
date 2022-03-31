@@ -2,18 +2,39 @@ package services
 
 import dto._
 import models.{CategoryModel, ProductModel}
+import models.Tables.Products
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import slick.jdbc.MySQLProfile.api._
+import javax.inject._
 
-class ProductService(db: Database)(implicit ec: ExecutionContext) {
+@Singleton
+class ProductService (db: Database)(implicit ec: ExecutionContext) {
 	
 	val productModel = new ProductModel(db)
 	val categoryModel = new CategoryModel(db)
 	
 	def searchProducts(kw: String, code: String): Future[List[ProductDto]] =
-		productModel getProductList { product =>
+		productModel getProductsWithAll { product =>
 			(product.name like s"%${kw}%") && (product.categoryCode like s"${code}%") }
+			
+	def getProductCount(kw: String, code: String): Future[Int] =
+		productModel getProductsCount { product =>
+			(product.name like s"%${kw}%") && (product.categoryCode like s"${code}%") }
+	
+	private val orderBy = Vector(
+		(p: Products) => p.price.asc,
+		(p: Products) => p.price.desc,
+		(p: Products) => p.reviewCount.asc
+	)
+	
+	def searchProductsBy(kw: String, code: String,
+						 seq: Int, page: Int, size: Int): Future[List[ProductDto]] =
+		productModel.getProductsWithAllSortBy(page, size, orderBy(seq)){ p: Products =>
+			(p.name like s"%${kw}%") && (p.categoryCode like s"${code}%") }
+			
+	def getProductById(productId: Int): Future[ProductDto] =
+		productModel.getProductById(productId)
 	
 	def getMainCategories =
 		categoryModel.getMainCategories
