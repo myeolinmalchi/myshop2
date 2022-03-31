@@ -17,7 +17,6 @@ class CategoryModel(db: Database)(implicit ec: ExecutionContext) {
 		db run sql"SELECT * FROM v_categories WHERE depth=0".as[(String, String)] map (_.toList)
 	
 	def getChildrens(code: String) = {
-		println(code)
 		val query = s"SELECT a.* FROM v_categories a INNER JOIN (SELECT * FROM v_categories WHERE code='${code}') b" +
 				" WHERE a.code LIKE concat(b.code, '%') AND a.depth = b.depth+1"
 		db run sql"#$query".as[(String, String)] map (_.toList)
