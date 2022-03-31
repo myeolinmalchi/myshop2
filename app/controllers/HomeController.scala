@@ -2,16 +2,12 @@ package controllers
 
 import dto._
 import javax.inject._
+import play.api.db.slick._
 import play.api.libs.json._
 import play.api.mvc._
+import scala.concurrent.ExecutionContext
 import services.ProductService
 import slick.jdbc.JdbcProfile
-import javax.inject._
-import play.api.db.slick._
-import play.api.mvc._
-import play.api.libs.json._
-import scala.concurrent.ExecutionContext
-import scala.util.{Failure, Success, Try}
 
 /**
  * This controller creates an `Action` to handle HTTP requests to the
@@ -34,21 +30,6 @@ class HomeController @Inject() (protected val dbConfigProvider: DatabaseConfigPr
     implicit val productWrites = Json.writes[ProductDto]
     
   def index = Action { implicit request =>
-      request.session.get("userId") match {
-        case Some(userId) => Ok(views.html.index(userId))
-        case None => Ok(views.html.index(null))
-      }
+      Ok(views.html.index())
   }
-    
-    def search(code: String, keyword: String) = Action.async { implicit request =>
-        val codeEnc = code match {
-            case "0" => ""
-            case s: String => s
-        }
-        
-        productService searchProducts(keyword, codeEnc) transform {
-            case Success(products) => Try(Ok(Json.toJson(products)))
-            case Failure(e) => Try(Ok(Json.toJson(Map("error" -> e.getMessage))))
-        }
-    }
 }
