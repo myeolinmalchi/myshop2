@@ -33,15 +33,12 @@ class CategoryController @Inject() (protected val dbConfigProvider: DatabaseConf
 	implicit val optionWrites = Json.writes[ProductOptionDto]
 	implicit val productWrites = Json.writes[ProductDto]
 	
-	private def withJsonBody[A](f: A => Future[Result])(implicit request: Request[AnyContent], reads: Reads[A]): Future[Result] = {
-		println(request.body.asJson)
+	private def withJsonBody[A](f: A => Future[Result])
+							   (implicit request: Request[AnyContent], reads: Reads[A]): Future[Result] = {
 		request.body.asJson.map { body =>
 			Json.fromJson[A](body) match {
 				case JsSuccess(a, path) => f(a)
-				case e@JsError(_) => {
-					println(e.toString)
-					Future.successful(Redirect(routes.SellerController.index))
-				}
+				case e@JsError(_) => Future.successful(Redirect(routes.SellerController.index))
 			}
 		}.getOrElse((Future.successful(Redirect(routes.SellerController.index))))
 	}
