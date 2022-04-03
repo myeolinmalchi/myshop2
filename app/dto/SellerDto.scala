@@ -1,6 +1,7 @@
 package dto
 
 import models.Tables._
+import play.api.libs.json.Json
 
 case class SellerDto(sellerId: String,
 				   sellerPw: String,
@@ -9,6 +10,10 @@ case class SellerDto(sellerId: String,
 				   phonenumber: String)
 
 object SellerDto{
+	
+	implicit val sellerReads = Json.reads[SellerDto]
+	implicit val sellerWrites = Json.writes[SellerDto]
+	
 	def newEntity(seller: Sellers#TableElementType) =
 		new SellerDto(seller.sellerId, seller.sellerPw, seller.name, seller.email, seller.phonenumber)
 
