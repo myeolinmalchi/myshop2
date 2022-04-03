@@ -14,7 +14,7 @@ trait Tables {
   import slick.jdbc.{GetResult => GR}
 
   /** DDL for all tables. Call .create to execute. */
-  lazy val schema: profile.SchemaDescription = Array(CartDetails.schema, Carts.schema, Categories.schema, OrderDetails.schema, Orders.schema, ProductImages.schema, ProductOptionItems.schema, ProductOptions.schema, Products.schema, ProductStock.schema, Qnas.schema, Reviews.schema, Sellers.schema, TempProductOptionItems.schema, TempProductOptions.schema, TempProducts.schema, UserAddresses.schema, Users.schema).reduceLeft(_ ++ _)
+  lazy val schema: profile.SchemaDescription = Array(CartDetails.schema, Carts.schema, Categories.schema, NonUserCartDetails.schema, NonUserCarts.schema, OrderDetails.schema, Orders.schema, ProductImages.schema, ProductOptionItems.schema, ProductOptions.schema, Products.schema, ProductStock.schema, Qnas.schema, Reviews.schema, Sellers.schema, UserAddresses.schema, Users.schema).reduceLeft(_ ++ _)
   @deprecated("Use .schema instead of .ddl", "3.0")
   def ddl = schema
 
@@ -128,6 +128,79 @@ trait Tables {
   /** Collection-like TableQuery object for table Categories */
   lazy val Categories = new TableQuery(tag => new Categories(tag))
 
+  /** Entity class storing rows of table NonUserCartDetails
+   *  @param nonUserCartId Database column non_user_cart_id SqlType(INT)
+   *  @param nonUserCartDetailId Database column non_user_cart_detail_id SqlType(INT UNSIGNED), AutoInc, PrimaryKey
+   *  @param optionItemId Database column option_item_id SqlType(INT UNSIGNED) */
+  case class NonUserCartDetailsRow(nonUserCartId: Int, nonUserCartDetailId: Long, optionItemId: Long)
+  /** GetResult implicit for fetching NonUserCartDetailsRow objects using plain SQL queries */
+  implicit def GetResultNonUserCartDetailsRow(implicit e0: GR[Int], e1: GR[Long]): GR[NonUserCartDetailsRow] = GR{
+    prs => import prs._
+    NonUserCartDetailsRow.tupled((<<[Int], <<[Long], <<[Long]))
+  }
+  /** Table description of table non_user_cart_details. Objects of this class serve as prototypes for rows in queries. */
+  class NonUserCartDetails(_tableTag: Tag) extends profile.api.Table[NonUserCartDetailsRow](_tableTag, Some("myshop2"), "non_user_cart_details") {
+    def * = (nonUserCartId, nonUserCartDetailId, optionItemId) <> (NonUserCartDetailsRow.tupled, NonUserCartDetailsRow.unapply)
+    /** Maps whole row to an option. Useful for outer joins. */
+    def ? = ((Rep.Some(nonUserCartId), Rep.Some(nonUserCartDetailId), Rep.Some(optionItemId))).shaped.<>({r=>import r._; _1.map(_=> NonUserCartDetailsRow.tupled((_1.get, _2.get, _3.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+
+    /** Database column non_user_cart_id SqlType(INT) */
+    val nonUserCartId: Rep[Int] = column[Int]("non_user_cart_id")
+    /** Database column non_user_cart_detail_id SqlType(INT UNSIGNED), AutoInc, PrimaryKey */
+    val nonUserCartDetailId: Rep[Long] = column[Long]("non_user_cart_detail_id", O.AutoInc, O.PrimaryKey)
+    /** Database column option_item_id SqlType(INT UNSIGNED) */
+    val optionItemId: Rep[Long] = column[Long]("option_item_id")
+
+    /** Foreign key referencing NonUserCarts (database name FK__non_user_carts) */
+    lazy val nonUserCartsFk = foreignKey("FK__non_user_carts", nonUserCartId, NonUserCarts)(r => r.nonUserCartId, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
+  }
+  /** Collection-like TableQuery object for table NonUserCartDetails */
+  lazy val NonUserCartDetails = new TableQuery(tag => new NonUserCartDetails(tag))
+
+  /** Entity class storing rows of table NonUserCarts
+   *  @param idToken Database column id_token SqlType(VARCHAR), Length(100,true)
+   *  @param nonUserCartId Database column non_user_cart_id SqlType(INT), AutoInc, PrimaryKey
+   *  @param name Database column name SqlType(VARCHAR), Length(100,true)
+   *  @param productId Database column product_id SqlType(INT)
+   *  @param price Database column price SqlType(INT)
+   *  @param quantity Database column quantity SqlType(INT)
+   *  @param addedDate Database column added_date SqlType(DATETIME) */
+  case class NonUserCartsRow(idToken: String, nonUserCartId: Int, name: String, productId: Int, price: Int, quantity: Int, addedDate: java.sql.Timestamp)
+  /** GetResult implicit for fetching NonUserCartsRow objects using plain SQL queries */
+  implicit def GetResultNonUserCartsRow(implicit e0: GR[String], e1: GR[Int], e2: GR[java.sql.Timestamp]): GR[NonUserCartsRow] = GR{
+    prs => import prs._
+    NonUserCartsRow.tupled((<<[String], <<[Int], <<[String], <<[Int], <<[Int], <<[Int], <<[java.sql.Timestamp]))
+  }
+  /** Table description of table non_user_carts. Objects of this class serve as prototypes for rows in queries. */
+  class NonUserCarts(_tableTag: Tag) extends profile.api.Table[NonUserCartsRow](_tableTag, Some("myshop2"), "non_user_carts") {
+    def * = (idToken, nonUserCartId, name, productId, price, quantity, addedDate) <> (NonUserCartsRow.tupled, NonUserCartsRow.unapply)
+    /** Maps whole row to an option. Useful for outer joins. */
+    def ? = ((Rep.Some(idToken), Rep.Some(nonUserCartId), Rep.Some(name), Rep.Some(productId), Rep.Some(price), Rep.Some(quantity), Rep.Some(addedDate))).shaped.<>({r=>import r._; _1.map(_=> NonUserCartsRow.tupled((_1.get, _2.get, _3.get, _4.get, _5.get, _6.get, _7.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+
+    /** Database column id_token SqlType(VARCHAR), Length(100,true) */
+    val idToken: Rep[String] = column[String]("id_token", O.Length(100,varying=true))
+    /** Database column non_user_cart_id SqlType(INT), AutoInc, PrimaryKey */
+    val nonUserCartId: Rep[Int] = column[Int]("non_user_cart_id", O.AutoInc, O.PrimaryKey)
+    /** Database column name SqlType(VARCHAR), Length(100,true) */
+    val name: Rep[String] = column[String]("name", O.Length(100,varying=true))
+    /** Database column product_id SqlType(INT) */
+    val productId: Rep[Int] = column[Int]("product_id")
+    /** Database column price SqlType(INT) */
+    val price: Rep[Int] = column[Int]("price")
+    /** Database column quantity SqlType(INT) */
+    val quantity: Rep[Int] = column[Int]("quantity")
+    /** Database column added_date SqlType(DATETIME) */
+    val addedDate: Rep[java.sql.Timestamp] = column[java.sql.Timestamp]("added_date")
+
+    /** Foreign key referencing Products (database name non_user_carts_ibfk_1) */
+    lazy val productsFk = foreignKey("non_user_carts_ibfk_1", productId, Products)(r => r.productId, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Restrict)
+
+    /** Index over (idToken) (database name user_id) */
+    val index1 = index("user_id", idToken)
+  }
+  /** Collection-like TableQuery object for table NonUserCarts */
+  lazy val NonUserCarts = new TableQuery(tag => new NonUserCarts(tag))
+
   /** Entity class storing rows of table OrderDetails
    *  @param orderId Database column order_id SqlType(INT), Default(None)
    *  @param orderDetailId Database column order_detail_id SqlType(INT), AutoInc, PrimaryKey
@@ -237,19 +310,18 @@ trait Tables {
    *  @param productOptionItemId Database column product_option_item_id SqlType(INT), AutoInc, PrimaryKey
    *  @param name Database column name SqlType(VARCHAR), Length(50,true)
    *  @param itemSequence Database column item_sequence SqlType(INT)
-   *  @param surcharge Database column surcharge SqlType(INT)
-   *  @param stock Database column stock SqlType(INT) */
-  case class ProductOptionItemsRow(productOptionId: Int, productOptionItemId: Int, name: String, itemSequence: Int, surcharge: Int, stock: Int)
+   *  @param surcharge Database column surcharge SqlType(INT) */
+  case class ProductOptionItemsRow(productOptionId: Int, productOptionItemId: Int, name: String, itemSequence: Int, surcharge: Int)
   /** GetResult implicit for fetching ProductOptionItemsRow objects using plain SQL queries */
   implicit def GetResultProductOptionItemsRow(implicit e0: GR[Int], e1: GR[String]): GR[ProductOptionItemsRow] = GR{
     prs => import prs._
-    ProductOptionItemsRow.tupled((<<[Int], <<[Int], <<[String], <<[Int], <<[Int], <<[Int]))
+    ProductOptionItemsRow.tupled((<<[Int], <<[Int], <<[String], <<[Int], <<[Int]))
   }
   /** Table description of table product_option_items. Objects of this class serve as prototypes for rows in queries. */
   class ProductOptionItems(_tableTag: Tag) extends profile.api.Table[ProductOptionItemsRow](_tableTag, Some("myshop2"), "product_option_items") {
-    def * = (productOptionId, productOptionItemId, name, itemSequence, surcharge, stock) <> (ProductOptionItemsRow.tupled, ProductOptionItemsRow.unapply)
+    def * = (productOptionId, productOptionItemId, name, itemSequence, surcharge) <> (ProductOptionItemsRow.tupled, ProductOptionItemsRow.unapply)
     /** Maps whole row to an option. Useful for outer joins. */
-    def ? = ((Rep.Some(productOptionId), Rep.Some(productOptionItemId), Rep.Some(name), Rep.Some(itemSequence), Rep.Some(surcharge), Rep.Some(stock))).shaped.<>({r=>import r._; _1.map(_=> ProductOptionItemsRow.tupled((_1.get, _2.get, _3.get, _4.get, _5.get, _6.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+    def ? = ((Rep.Some(productOptionId), Rep.Some(productOptionItemId), Rep.Some(name), Rep.Some(itemSequence), Rep.Some(surcharge))).shaped.<>({r=>import r._; _1.map(_=> ProductOptionItemsRow.tupled((_1.get, _2.get, _3.get, _4.get, _5.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
 
     /** Database column product_option_id SqlType(INT) */
     val productOptionId: Rep[Int] = column[Int]("product_option_id")
@@ -261,8 +333,6 @@ trait Tables {
     val itemSequence: Rep[Int] = column[Int]("item_sequence")
     /** Database column surcharge SqlType(INT) */
     val surcharge: Rep[Int] = column[Int]("surcharge")
-    /** Database column stock SqlType(INT) */
-    val stock: Rep[Int] = column[Int]("stock")
 
     /** Foreign key referencing ProductOptions (database name product_option_items_ibfk_1) */
     lazy val productOptionsFk = foreignKey("product_option_items_ibfk_1", productOptionId, ProductOptions)(r => r.productOptionId, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
@@ -353,30 +423,41 @@ trait Tables {
   lazy val Products = new TableQuery(tag => new Products(tag))
 
   /** Entity class storing rows of table ProductStock
+   *  @param productId Database column product_id SqlType(INT)
+   *  @param stock Database column stock SqlType(INT)
    *  @param productStockId Database column product_stock_id SqlType(INT), AutoInc, PrimaryKey
    *  @param parentId Database column parent_id SqlType(INT)
-   *  @param name Database column name SqlType(VARCHAR), Length(50,true)
+   *  @param productOptionItemId Database column product_option_item_id SqlType(INT)
    *  @param depth Database column depth SqlType(INT) */
-  case class ProductStockRow(productStockId: Int, parentId: Int, name: String, depth: Int)
+  case class ProductStockRow(productId: Int, stock: Int, productStockId: Int, parentId: Int, productOptionItemId: Int, depth: Int)
   /** GetResult implicit for fetching ProductStockRow objects using plain SQL queries */
-  implicit def GetResultProductStockRow(implicit e0: GR[Int], e1: GR[String]): GR[ProductStockRow] = GR{
+  implicit def GetResultProductStockRow(implicit e0: GR[Int]): GR[ProductStockRow] = GR{
     prs => import prs._
-    ProductStockRow.tupled((<<[Int], <<[Int], <<[String], <<[Int]))
+    ProductStockRow.tupled((<<[Int], <<[Int], <<[Int], <<[Int], <<[Int], <<[Int]))
   }
   /** Table description of table product_stock. Objects of this class serve as prototypes for rows in queries. */
   class ProductStock(_tableTag: Tag) extends profile.api.Table[ProductStockRow](_tableTag, Some("myshop2"), "product_stock") {
-    def * = (productStockId, parentId, name, depth) <> (ProductStockRow.tupled, ProductStockRow.unapply)
+    def * = (productId, stock, productStockId, parentId, productOptionItemId, depth) <> (ProductStockRow.tupled, ProductStockRow.unapply)
     /** Maps whole row to an option. Useful for outer joins. */
-    def ? = ((Rep.Some(productStockId), Rep.Some(parentId), Rep.Some(name), Rep.Some(depth))).shaped.<>({r=>import r._; _1.map(_=> ProductStockRow.tupled((_1.get, _2.get, _3.get, _4.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+    def ? = ((Rep.Some(productId), Rep.Some(stock), Rep.Some(productStockId), Rep.Some(parentId), Rep.Some(productOptionItemId), Rep.Some(depth))).shaped.<>({r=>import r._; _1.map(_=> ProductStockRow.tupled((_1.get, _2.get, _3.get, _4.get, _5.get, _6.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
 
+    /** Database column product_id SqlType(INT) */
+    val productId: Rep[Int] = column[Int]("product_id")
+    /** Database column stock SqlType(INT) */
+    val stock: Rep[Int] = column[Int]("stock")
     /** Database column product_stock_id SqlType(INT), AutoInc, PrimaryKey */
     val productStockId: Rep[Int] = column[Int]("product_stock_id", O.AutoInc, O.PrimaryKey)
     /** Database column parent_id SqlType(INT) */
     val parentId: Rep[Int] = column[Int]("parent_id")
-    /** Database column name SqlType(VARCHAR), Length(50,true) */
-    val name: Rep[String] = column[String]("name", O.Length(50,varying=true))
+    /** Database column product_option_item_id SqlType(INT) */
+    val productOptionItemId: Rep[Int] = column[Int]("product_option_item_id")
     /** Database column depth SqlType(INT) */
     val depth: Rep[Int] = column[Int]("depth")
+
+    /** Foreign key referencing ProductOptionItems (database name FK_product_stock_product_option_items) */
+    lazy val productOptionItemsFk = foreignKey("FK_product_stock_product_option_items", productOptionItemId, ProductOptionItems)(r => r.productOptionItemId, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
+    /** Foreign key referencing Products (database name FK_product_stock_products) */
+    lazy val productsFk = foreignKey("FK_product_stock_products", productId, Products)(r => r.productId, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
   }
   /** Collection-like TableQuery object for table ProductStock */
   lazy val ProductStock = new TableQuery(tag => new ProductStock(tag))
@@ -501,117 +582,6 @@ trait Tables {
   }
   /** Collection-like TableQuery object for table Sellers */
   lazy val Sellers = new TableQuery(tag => new Sellers(tag))
-
-  /** Entity class storing rows of table TempProductOptionItems
-   *  @param tempProductOptionId Database column temp_product_option_id SqlType(INT)
-   *  @param tempProductOptionItemId Database column temp_product_option_item_id SqlType(INT), AutoInc, PrimaryKey
-   *  @param name Database column name SqlType(VARCHAR), Length(500,true), Default(None)
-   *  @param itemSequence Database column item_sequence SqlType(INT), Default(None)
-   *  @param surcharge Database column surcharge SqlType(INT), Default(None) */
-  case class TempProductOptionItemsRow(tempProductOptionId: Int, tempProductOptionItemId: Int, name: Option[String] = None, itemSequence: Option[Int] = None, surcharge: Option[Int] = None)
-  /** GetResult implicit for fetching TempProductOptionItemsRow objects using plain SQL queries */
-  implicit def GetResultTempProductOptionItemsRow(implicit e0: GR[Int], e1: GR[Option[String]], e2: GR[Option[Int]]): GR[TempProductOptionItemsRow] = GR{
-    prs => import prs._
-    TempProductOptionItemsRow.tupled((<<[Int], <<[Int], <<?[String], <<?[Int], <<?[Int]))
-  }
-  /** Table description of table temp_product_option_items. Objects of this class serve as prototypes for rows in queries. */
-  class TempProductOptionItems(_tableTag: Tag) extends profile.api.Table[TempProductOptionItemsRow](_tableTag, Some("myshop2"), "temp_product_option_items") {
-    def * = (tempProductOptionId, tempProductOptionItemId, name, itemSequence, surcharge) <> (TempProductOptionItemsRow.tupled, TempProductOptionItemsRow.unapply)
-    /** Maps whole row to an option. Useful for outer joins. */
-    def ? = ((Rep.Some(tempProductOptionId), Rep.Some(tempProductOptionItemId), name, itemSequence, surcharge)).shaped.<>({r=>import r._; _1.map(_=> TempProductOptionItemsRow.tupled((_1.get, _2.get, _3, _4, _5)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
-
-    /** Database column temp_product_option_id SqlType(INT) */
-    val tempProductOptionId: Rep[Int] = column[Int]("temp_product_option_id")
-    /** Database column temp_product_option_item_id SqlType(INT), AutoInc, PrimaryKey */
-    val tempProductOptionItemId: Rep[Int] = column[Int]("temp_product_option_item_id", O.AutoInc, O.PrimaryKey)
-    /** Database column name SqlType(VARCHAR), Length(500,true), Default(None) */
-    val name: Rep[Option[String]] = column[Option[String]]("name", O.Length(500,varying=true), O.Default(None))
-    /** Database column item_sequence SqlType(INT), Default(None) */
-    val itemSequence: Rep[Option[Int]] = column[Option[Int]]("item_sequence", O.Default(None))
-    /** Database column surcharge SqlType(INT), Default(None) */
-    val surcharge: Rep[Option[Int]] = column[Option[Int]]("surcharge", O.Default(None))
-
-    /** Foreign key referencing TempProductOptions (database name temp_product_option_items_ibfk_1) */
-    lazy val tempProductOptionsFk = foreignKey("temp_product_option_items_ibfk_1", tempProductOptionId, TempProductOptions)(r => r.tempProductOptionId, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
-  }
-  /** Collection-like TableQuery object for table TempProductOptionItems */
-  lazy val TempProductOptionItems = new TableQuery(tag => new TempProductOptionItems(tag))
-
-  /** Entity class storing rows of table TempProductOptions
-   *  @param tempProductId Database column temp_product_id SqlType(INT)
-   *  @param tempProductOptionId Database column temp_product_option_id SqlType(INT), AutoInc, PrimaryKey
-   *  @param name Database column name SqlType(VARCHAR), Length(100,true), Default(None)
-   *  @param optionSequence Database column option_sequence SqlType(INT), Default(None)
-   *  @param images Database column images SqlType(VARCHAR), Length(1000,true), Default(None) */
-  case class TempProductOptionsRow(tempProductId: Int, tempProductOptionId: Int, name: Option[String] = None, optionSequence: Option[Int] = None, images: Option[String] = None)
-  /** GetResult implicit for fetching TempProductOptionsRow objects using plain SQL queries */
-  implicit def GetResultTempProductOptionsRow(implicit e0: GR[Int], e1: GR[Option[String]], e2: GR[Option[Int]]): GR[TempProductOptionsRow] = GR{
-    prs => import prs._
-    TempProductOptionsRow.tupled((<<[Int], <<[Int], <<?[String], <<?[Int], <<?[String]))
-  }
-  /** Table description of table temp_product_options. Objects of this class serve as prototypes for rows in queries. */
-  class TempProductOptions(_tableTag: Tag) extends profile.api.Table[TempProductOptionsRow](_tableTag, Some("myshop2"), "temp_product_options") {
-    def * = (tempProductId, tempProductOptionId, name, optionSequence, images) <> (TempProductOptionsRow.tupled, TempProductOptionsRow.unapply)
-    /** Maps whole row to an option. Useful for outer joins. */
-    def ? = ((Rep.Some(tempProductId), Rep.Some(tempProductOptionId), name, optionSequence, images)).shaped.<>({r=>import r._; _1.map(_=> TempProductOptionsRow.tupled((_1.get, _2.get, _3, _4, _5)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
-
-    /** Database column temp_product_id SqlType(INT) */
-    val tempProductId: Rep[Int] = column[Int]("temp_product_id")
-    /** Database column temp_product_option_id SqlType(INT), AutoInc, PrimaryKey */
-    val tempProductOptionId: Rep[Int] = column[Int]("temp_product_option_id", O.AutoInc, O.PrimaryKey)
-    /** Database column name SqlType(VARCHAR), Length(100,true), Default(None) */
-    val name: Rep[Option[String]] = column[Option[String]]("name", O.Length(100,varying=true), O.Default(None))
-    /** Database column option_sequence SqlType(INT), Default(None) */
-    val optionSequence: Rep[Option[Int]] = column[Option[Int]]("option_sequence", O.Default(None))
-    /** Database column images SqlType(VARCHAR), Length(1000,true), Default(None) */
-    val images: Rep[Option[String]] = column[Option[String]]("images", O.Length(1000,varying=true), O.Default(None))
-
-    /** Foreign key referencing TempProducts (database name temp_product_options_ibfk_1) */
-    lazy val tempProductsFk = foreignKey("temp_product_options_ibfk_1", tempProductId, TempProducts)(r => r.tempProductId, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
-  }
-  /** Collection-like TableQuery object for table TempProductOptions */
-  lazy val TempProductOptions = new TableQuery(tag => new TempProductOptions(tag))
-
-  /** Entity class storing rows of table TempProducts
-   *  @param tempProductId Database column temp_product_id SqlType(INT), AutoInc, PrimaryKey
-   *  @param name Database column name SqlType(VARCHAR), Length(100,true), Default(None)
-   *  @param sellerId Database column seller_id SqlType(VARCHAR), Length(100,true), Default(None)
-   *  @param price Database column price SqlType(INT), Default(None)
-   *  @param categoryCode Database column category_code SqlType(VARCHAR), Length(20,true), Default(None)
-   *  @param detailInfo Database column detail_info SqlType(VARCHAR), Length(1000,true), Default(None)
-   *  @param thumbnail Database column thumbnail SqlType(VARCHAR), Length(1000,true), Default(None) */
-  case class TempProductsRow(tempProductId: Int, name: Option[String] = None, sellerId: Option[String] = None, price: Option[Int] = None, categoryCode: Option[String] = None, detailInfo: Option[String] = None, thumbnail: Option[String] = None)
-  /** GetResult implicit for fetching TempProductsRow objects using plain SQL queries */
-  implicit def GetResultTempProductsRow(implicit e0: GR[Int], e1: GR[Option[String]], e2: GR[Option[Int]]): GR[TempProductsRow] = GR{
-    prs => import prs._
-    TempProductsRow.tupled((<<[Int], <<?[String], <<?[String], <<?[Int], <<?[String], <<?[String], <<?[String]))
-  }
-  /** Table description of table temp_products. Objects of this class serve as prototypes for rows in queries. */
-  class TempProducts(_tableTag: Tag) extends profile.api.Table[TempProductsRow](_tableTag, Some("myshop2"), "temp_products") {
-    def * = (tempProductId, name, sellerId, price, categoryCode, detailInfo, thumbnail) <> (TempProductsRow.tupled, TempProductsRow.unapply)
-    /** Maps whole row to an option. Useful for outer joins. */
-    def ? = ((Rep.Some(tempProductId), name, sellerId, price, categoryCode, detailInfo, thumbnail)).shaped.<>({r=>import r._; _1.map(_=> TempProductsRow.tupled((_1.get, _2, _3, _4, _5, _6, _7)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
-
-    /** Database column temp_product_id SqlType(INT), AutoInc, PrimaryKey */
-    val tempProductId: Rep[Int] = column[Int]("temp_product_id", O.AutoInc, O.PrimaryKey)
-    /** Database column name SqlType(VARCHAR), Length(100,true), Default(None) */
-    val name: Rep[Option[String]] = column[Option[String]]("name", O.Length(100,varying=true), O.Default(None))
-    /** Database column seller_id SqlType(VARCHAR), Length(100,true), Default(None) */
-    val sellerId: Rep[Option[String]] = column[Option[String]]("seller_id", O.Length(100,varying=true), O.Default(None))
-    /** Database column price SqlType(INT), Default(None) */
-    val price: Rep[Option[Int]] = column[Option[Int]]("price", O.Default(None))
-    /** Database column category_code SqlType(VARCHAR), Length(20,true), Default(None) */
-    val categoryCode: Rep[Option[String]] = column[Option[String]]("category_code", O.Length(20,varying=true), O.Default(None))
-    /** Database column detail_info SqlType(VARCHAR), Length(1000,true), Default(None) */
-    val detailInfo: Rep[Option[String]] = column[Option[String]]("detail_info", O.Length(1000,varying=true), O.Default(None))
-    /** Database column thumbnail SqlType(VARCHAR), Length(1000,true), Default(None) */
-    val thumbnail: Rep[Option[String]] = column[Option[String]]("thumbnail", O.Length(1000,varying=true), O.Default(None))
-
-    /** Foreign key referencing Sellers (database name temp_products_ibfk_1) */
-    lazy val sellersFk = foreignKey("temp_products_ibfk_1", sellerId, Sellers)(r => Rep.Some(r.sellerId), onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Restrict)
-  }
-  /** Collection-like TableQuery object for table TempProducts */
-  lazy val TempProducts = new TableQuery(tag => new TempProducts(tag))
 
   /** Entity class storing rows of table UserAddresses
    *  @param userId Database column user_id SqlType(VARCHAR), Length(20,true)
