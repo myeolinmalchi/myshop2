@@ -2,23 +2,7 @@ package dto
 
 import models.Tables._
 import play.api.libs.json.Json
-
-object readAndWrites {
-	implicit val itemRead = Json.reads[ProductOptionItemDto]
-	implicit val itemWrite = Json.writes[ProductOptionItemDto]
-	
-	implicit val optionRead = Json.reads[ProductOptionDto]
-	implicit val optionWrite = Json.writes[ProductOptionDto]
-	
-	implicit val imageRead = Json.reads[ProductImageDto]
-	implicit val imageWrite = Json.writes[ProductImageDto]
-	
-	implicit lazy val productRead = Json.reads[ProductDto]
-	implicit lazy val productWrite = Json.writes[ProductDto]
-	
-	implicit val cartRead = Json.reads[CartDto]
-	implicit val cartWrite = Json.writes[CartDto]
-}
+import scala.language.implicitConversions
 
 case class ProductDto(var productId: Int,
 					  name: String,
@@ -58,10 +42,6 @@ case class ProductImageDto(var productId: Int,
 	}
 }
 
-object ProductImageDto {
-	def newInstance(img: ProductImages#TableElementType): ProductImageDto =
-		new ProductImageDto(img.productId, img.productImageId, img.image, img.sequence)
-}
 
 case class ProductOptionDto(var productId: Int,
 							var productOptionId: Int,
@@ -86,7 +66,7 @@ case class ProductOptionDto(var productId: Int,
 }
 
 case class ProductOptionItemDto(var productOptionId: Int,
-							   productOptionItemId: Int,
+								var productOptionItemId: Int,
 							   name: String,
 							   itemSequence: Int,
 							   surcharge: Int){
@@ -94,21 +74,38 @@ case class ProductOptionItemDto(var productOptionId: Int,
 		this.productOptionId = id
 		this
 	}
-}
-
-object ProductDto {
-	def newInstance(p: Products#TableElementType) =
-		new ProductDto(p.productId, p.name, p.sellerId, p.price.toInt, p.categoryCode, p.detailInfo, p.thumbnail, p
-				.reviewCount, p.rating, Nil, Nil)
-}
-
-object ProductOptionDto {
-	def newInstance(o: ProductOptions#TableElementType) =
-		new ProductOptionDto(o.productId, o.productOptionId, o.name, o.optionSequence, Nil)
 	
+	def setId(id: Int): ProductOptionItemDto = {
+		this.productOptionItemId = id
+		this
+	}
 }
 
 object ProductOptionItemDto {
-	def newInstance(i: ProductOptionItems#TableElementType) =
+	implicit val itemReads = Json.reads[ProductOptionItemDto]
+	implicit val itemWrites = Json.writes[ProductOptionItemDto]
+	implicit val newInstance = (i: ProductOptionItems#TableElementType) =>
 		new ProductOptionItemDto(i.productOptionId, i.productOptionItemId, i.name, i.itemSequence, i.surcharge)
 }
+object ProductOptionDto{
+	implicit val optionReads = Json.reads[ProductOptionDto]
+	implicit val optionWrites = Json.writes[ProductOptionDto]
+	implicit val newInstance: ProductOptions#TableElementType => ProductOptionDto =
+		o => new ProductOptionDto(o.productId, o.productOptionId, o.name, o.optionSequence, Nil)
+	
+}
+object ProductImageDto {
+	implicit val imageRead = Json.reads[ProductImageDto]
+	implicit val imageWrite = Json.writes[ProductImageDto]
+	implicit val newInstance: ProductImages#TableElementType => ProductImageDto =
+		img => new ProductImageDto(img.productId, img.productImageId, img.image, img.sequence)
+}
+object ProductDto {
+	implicit val productReads = Json.reads[ProductDto]
+	implicit val productWrites = Json.writes[ProductDto]
+	implicit val newInstance: Products#TableElementType => ProductDto =
+		p => new ProductDto(p.productId, p.name, p.sellerId, p.price.toInt, p.categoryCode, p.detailInfo, p.thumbnail, p
+				.reviewCount, p.rating, Nil, Nil)
+}
+
+
