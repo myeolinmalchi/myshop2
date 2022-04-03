@@ -1,21 +1,15 @@
 package services
 
-import dto.{AddressDto, CartDto, ProductDto, UserDto}
-import javax.inject._
-import scala.concurrent.{ExecutionContext, Future}
-import slick.jdbc.MySQLProfile.api._
-import models.Tables._
-import scala.collection.mutable.Map
-import scala.util.{Failure, Success, Try}
-import java.security.MessageDigest
-import java.math.BigInteger
-import javax.crypto.Cipher
-import javax.crypto.spec.SecretKeySpec
 import common.encryption._
-import models.{CartModel, UserModel}
-import play.api.libs.oauth.{ConsumerKey, OAuth, ServiceInfo}
+import dto.{AddressDto, CartDto, UserDto}
+import javax.inject._
+import models.Tables._
+import models.{CartModel, ProductModel, UserModel}
+import scala.collection.mutable.Map
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
-import slick.lifted.AbstractTable
+import scala.util.{Failure, Success, Try}
+import slick.jdbc.MySQLProfile.api._
 
 /**
  * user 테이블 및 user_id를 외래키로 갖는 테이블의 데이터를 다루는 클래스
@@ -28,6 +22,7 @@ class UserService(db: Database)(implicit ec: ExecutionContext) {
 	
 	private val userModel = new UserModel(db)
 	private val cartModel = new CartModel(db)
+	private val productModel = new ProductModel(db)
 	
 	def login(userId: String, userPw: String): Future[Option[Boolean]] =
 		userModel.getUserById(userId) map {
@@ -100,22 +95,41 @@ class UserService(db: Database)(implicit ec: ExecutionContext) {
 	
 	def getUser(userId: String): Future[UserDto] =
 		userModel getUserById(userId) map(_.getOrElse(throw new Exception()))
-		
-	def addCart(cart: CartDto): Future[Int] =
-		cartModel addCart(cart)
-		
+	
+	private val outOfStockException = (stock: Int) =>
+		Future.failed(new Exception(s"재고가 부족합니다! (남은 수량: ${stock})"))
+	
+	def updateQuantity(q: Int)(implicit cartId: Int): Future[Int] =
+		cartModel getCartByCartId cartId flatMap { cart =>
+			println(cart.itemList.size)
+			val is = cart.itemList.map(_.productOptionItemId)
+			productModel checkStock(is, q) flatMap {
+				case (stock, false) => outOfStockException(stock)
+				case (_, true) => cartModel updateQuantity q
+			}
+		}
+	
+	def addCart(cart: CartDto): Future[Int] = {
+		val is = cart.itemList.map(_.productOptionItemId)
+		productModel checkStock(is, cart.quantity) flatMap {
+			case (stock, false) => outOfStockException(stock)
+			case (_, true) => cartModel addCart cart
+		}
+	}
+	
 	def addQuantity(implicit cartId: Int): Future[Int] = cartModel addQuantity
 		
 	def subQuantity(implicit cartId: Int): Future[Int] = cartModel subQuantity
 	
-	def updateQuantity(q: Int)(implicit cartId: Int): Future[Int] =
-		cartModel updateQuantity(q)
 	
 	def getCarts(implicit userId: String): Future[List[CartDto]] =
 		cartModel getCartsByUserId
 		
 	def getCart(implicit cartId: Int): Future[CartDto] =
 		cartModel getCartByCartId
+		
+	def deleteCart(implicit cartId: Int): Future[Int] =
+		cartModel deleteCart
 	
 	def getAddress(implicit userId: String): Future[Seq[AddressDto]] =
 		db.run(UserAddresses.filter(addr => addr.userId === userId).result).map(_.map(AddressDto(_)))
