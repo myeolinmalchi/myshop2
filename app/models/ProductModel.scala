@@ -6,7 +6,6 @@ import javax.inject._
 import models.Tables._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
 import slick.jdbc.MySQLProfile.api._
 
 @Singleton
@@ -21,142 +20,194 @@ class ProductModel(db: Database)(implicit ec: ExecutionContext) {
 	import commonApi._
 	
 	private object InnerApi {
-		def getProducts(g: ProductDto => Future[ProductDto])
-					   (implicit f: Products => Rep[Boolean]) =
-			select[Products, ProductDto](ProductDto.newInstance) { product =>
-				f(product) } flatMap(_ traverse(product => g(product)))
-				
-		def getProduct(productId: Int, g: ProductDto => Future[ProductDto]) =
-			selectOne[Products, ProductDto](ProductDto.newInstance) { product =>
-				product.productId === productId
-			} flatMap(_ map(product => g(product)) getOrElse(throw new Exception()))
 		
-		def getProductsSortBy(page: Int, n: Int, g: ProductDto => Future[ProductDto],
-							  h: Products => slick.lifted.ColumnOrdered[_])
-							 (implicit f: Products => Rep[Boolean]) =
-			db.run(Products.filter(product => f(product)).sortBy(h).drop(n*(page-1)).take(n).result)
-					.map(_ map{ row => ProductDto.newInstance(row)} toList)
-					.flatMap(_ traverse(product => g(product)))
+		def insertProduct(p: ProductDto) = {
+			val query = Products returning Products.map(_.productId)
+			val row = ProductsRow(p.productId, p.name, p.sellerId,
+				p.price, p.categoryCode, p.detailInfo, p.thumbnail)
+			query += row
+		}
 		
-		def getImages(product: ProductDto): Future[ProductDto] =
-			select[ProductImages, ProductImageDto](ProductImageDto.newInstance) { image =>
-				image.productId === product.productId } map (image => product.setImages(image))
+		def insertOption(pid: Int, o: ProductOptionDto) = {
+			val query = ProductOptions returning ProductOptions.map(_.productOptionId)
+			val row = ProductOptionsRow(pid, 0, o.name, o.optionSequence)
+			query += row
+		}
 		
-		def getOptions(product: ProductDto, g: ProductOptionDto => Future[ProductOptionDto]) =
-			select[ProductOptions, ProductOptionDto](ProductOptionDto.newInstance) { option =>
-				option.productId === product.productId } flatMap(_ traverse(option => g(option))) map(option =>
-				product.setOptions(option))
+		def insertItem(oid: Int, i: ProductOptionItemDto) = {
+			val query = ProductOptionItems returning ProductOptionItems.map(_.productOptionItemId)
+			val row = ProductOptionItemsRow(oid, 0, i.name, i.itemSequence, i.surcharge)
+			query += row
+		}
 		
-		def getItems(option: ProductOptionDto) =
-			select[ProductOptionItems, ProductOptionItemDto](ProductOptionItemDto.newInstance) { item =>
-				item.productOptionId === option.productOptionId } map (item => option.setItems(item))
-		
-		def insertProduct(p: ProductDto)(f: ProductDto => Future[ProductDto]) = p.optionList match {
-			case Nil => Future.failed(new NoSuchElementException(s"[${p.name}] 메인옵션은 필수항목입니다."))
-			case _ => {
-				val query = Products returning Products.map(_.productId)
-				val row = ProductsRow(0, p.name, p.sellerId, p.price, p.categoryCode, p.detailInfo, p.thumbnail, 0, 0)
-				db run (query+=row) map(id => p.setProductId(id)) flatMap(f(_))
+		def insertOptions(pid: Int, os: List[ProductOptionDto]) = DBIO.sequence {
+			os map { o =>
+				for {
+					optionId <- insertOption(pid, o)
+					itemDtoList <- insertItems(pid, optionId.self, o.itemList)
+				} yield o.setItems(itemDtoList)
 			}
 		}
 		
-		def insertImage(i: ProductImageDto) = {
-			val row = ProductImagesRow(i.productId, -1, i.image, i.sequence)
-			db run (ProductImages+=row)
-			Future(i)
-		}
-		
-		def insertOption(o: ProductOptionDto) = o.itemList match {
-			case Nil => Future.failed(new Exception("error"))
-			case _ =>
-				val query = (ProductOptions returning ProductOptions.map(_.productOptionId))
-				val row = ProductOptionsRow(o.productId, 0, o.name, o.optionSequence)
-				for { optionId <- db.run(query += row) } yield o.setOptionId(optionId)
-		}
-		
-		def insertItem(i: ProductOptionItemDto) = {
-			val row = ProductOptionItemsRow(i.productOptionId, -1, i.name, i.itemSequence, i.surcharge)
-			db.run(ProductOptionItems += row)
-			Future(i)
-		}
-		
-		def getStocks(productId: Int, depth: Int, parentId: Int): Future[List[StockResponseDto]] = {
-			val query = ProductStock.filter(s => s.productId === productId && s.depth === depth)
-			val f = (s: ProductStock#TableElementType) =>
-				StockResponseDto(s.productId, s.stock, s.productStockId, s.parentId, s.name, s.depth, Nil)
-			parentId match {
-				case 0 => db.run(query.result) map(_.toList map f)
-				case pid: Int => db.run(query.filter(s => s.parentId === parentId).result) map(_.toList map(f))
+		def insertItems(pid: Int, oid: Int, is: List[ProductOptionItemDto]) = DBIO.sequence {
+			is map { i =>
+				for {
+					itemId <- insertItem(oid, i)
+				} yield i.setId(itemId.self)
 			}
+		}
+		
+		def insertImages(pid: Int, is: List[ProductImageDto]) = {
+			val rows = is.map(i => ProductImagesRow(pid, 0, i.image, i.sequence))
+			ProductImages ++= rows
+		}
+		
+		def initProductStock(pid: Int, os: List[ProductOptionDto]): DBIOAction[Int, NoStream, Effect.All]= {
+			def go(os: List[ProductOptionDto],
+				   parentId: Int, depth: Int): DBIOAction[Int, NoStream, Effect.All]= os match {
+				case h :: t => DBIO.sequence { h.itemList map { item =>
+					val query = ProductStock returning ProductStock.map(_.productStockId)
+					val row = ProductStockRow(pid, 0, 0, parentId, item.productOptionItemId, depth)
+					(for {
+						stockId <- query += row
+						aff <- go(t, stockId.self, depth + 1)
+					} yield aff).transactionally
+				}} map(_.sum)
+				case Nil => DBIO.successful(0)
+			}
+			go(os, 0, 0)
+		}
+		
+		val productQuery = (f: Products => Rep[Boolean]) => Products.filter(f(_))
+		val optionQuery = (pid: Int) => ProductOptions.filter(_.productId === pid)
+		val itemQuery = (oid: Int) => ProductOptionItems.filter(_.productOptionId === oid)
+		val imageQuery = (pid: Int) => ProductImages.filter(_.productId === pid)
+		
+		def toDto[T, R](xs: Seq[T])(g: R => DBIOAction[R, NoStream, Effect.All])
+					   (implicit f: T => R): DBIOAction[List[R], NoStream, Effect.All] =
+			DBIO.sequence(xs.map(f andThen g).toList)
+	}
+
+	import InnerApi._
+	
+	def getProducts(implicit f: Products => Rep[Boolean]): Future[List[ProductDto]] =
+		db run (for {
+			products <- productQuery(f).result
+			productDtoList <- toDto(products) { p: ProductDto =>
+				for{options <- optionQuery(p.productId).result
+					optionDtoList <- toDto(options) { o: ProductOptionDto =>
+						for{items <- itemQuery(o.productOptionId).result
+							itemDtoList = items.map(ProductOptionItemDto.newInstance).toList
+						} yield o.setItems(itemDtoList) }
+				} yield p.setOptions(optionDtoList) }
+		} yield productDtoList)
+		
+	def getProductsSortBy(page: Int, n: Int, h: Products => slick.lifted.ColumnOrdered[_])
+						 (implicit f: Products => Rep[Boolean]): Future[List[ProductDto]] =
+		db run (for {
+			products <- productQuery(f).sortBy(h).drop((page-1)*n).take(n).result
+			productDtoList <- toDto(products) { p: ProductDto =>
+				for{options <- optionQuery(p.productId).result
+					optionDtoList <- toDto(options) { o: ProductOptionDto =>
+						for{items <- itemQuery(o.productOptionId).result
+							itemDtoList = items.map(ProductOptionItemDto.newInstance).toList
+						} yield o.setItems(itemDtoList) }
+				} yield p.setOptions(optionDtoList) }
+		} yield productDtoList)
+	
+	def getProductsCount(implicit f: Products => Rep[Boolean]): Future[Int] =
+		db run Products.filter(f(_)).map(_.productId).result map(_.toList.size)
+	
+	def getProductOptionsCount(productId: Int): Future[Int] =
+		db run ProductOptions.filter(o => o.productId === productId)
+				.map(_.productOptionId).result map(_.toList.size)
+		
+	def getProductById(productId: Int): Future[ProductDto]= {
+		val query = for {
+			product <- productQuery(_.productId === productId).result.headOption
+			options <- optionQuery(productId).result
+			images <- imageQuery(productId).result
+			productDto = ProductDto.newInstance(product.getOrElse(throw new Exception()))
+			optionDtoList <- toDto(options) { o: ProductOptionDto =>
+				for{items <- itemQuery(o.productOptionId).result
+					itemDtoList <- toDto(items) { i: ProductOptionItemDto =>  DBIO.successful(i) }
+				} yield o.setItems(itemDtoList) }
+			imageDtoList <- toDto(images) { i: ProductImageDto => DBIO.successful(i) }
+		} yield productDto
+				.setOptions(optionDtoList)
+				.setImages(imageDtoList)
+		db run query
+	}
+	
+	def insertProductWithAll(p: ProductDto): Future[Int] =
+		db run (for {
+			productId <- insertProduct(p)
+			optionDtoList <- insertOptions(productId.self, p.optionList)
+			aff1 <- initProductStock(productId.self, optionDtoList)
+			aff2 <- insertImages(productId.self, p.imageList)
+		} yield aff1.self + aff2.getOrElse(0)).transactionally
+	
+	def getProductOptionStock(productId: Int, depth: Int, parentId: Int): Future[List[StockResponseDto]] = {
+		val query = ProductStock.filter(s => s.productId === productId && s.depth === depth)
+		val f = (s: ProductStock#TableElementType) =>
+			StockResponseDto(s.productId, s.stock, s.productStockId, s.parentId, s.productOptionItemId, s.depth, Nil)
+		parentId match {
+			case 0 => db.run(query.result) map(_.toList map f)
+			case pid: Int => db.run(query.filter(s => s.parentId === parentId).result) map(_.toList map f)
 		}
 	}
 	
-	import InnerApi._
-	
-	def getProductsWithAll(implicit f: Products => Rep[Boolean]): Future[List[ProductDto]] =
-		getProducts(getOptions(_, getItems))
-	
-	def getProductsWithAllSortBy(page: Int, n: Int, h: Products => slick.lifted.ColumnOrdered[_])
-								(implicit f: Products => Rep[Boolean]): Future[List[ProductDto]] =
-		getProductsSortBy(page, n, getOptions(_, getItems), h)
-	
-	def getProductsCount(implicit f: Products => Rep[Boolean]): Future[Int] =
-		db.run(Products.filter(f(_)).map(_.productId).result).map(_.toList.size)
-		
-	def getProductById(productId: Int): Future[ProductDto] =
-		getProduct(productId, getOptions(_, getItems) flatMap(getImages))
-		
-	def insertProductWithAll(p: ProductDto): Future[ProductDto] =
-		insertProduct(p) { p =>
-			p.optionList traverse { o =>
-				insertOption(o.setProductId(p.productId))
-			} flatMap ( _ traverse { o =>
-				o.itemList traverse { i =>
-					insertItem(i.setOptionId(o.productOptionId))
-				} map o.setItems
-			}) map p.setOptions
-		} flatMap { p =>
-			p.imageList traverse { i =>
-				insertImage(i.setProductId(p.productId))
-			} map p.setImages
+	def checkStock(is: List[Int], quantity: Int): Future[(Int, Boolean)] =  {
+		def go(is: List[Int], parentId: Int, s: Int): DBIOAction[(Int, Boolean),NoStream,Effect.All] = is match {
+			case h::t =>
+				val query = ProductStock.filter { stock =>
+					stock.productOptionItemId === h && stock.parentId === parentId }
+				(for {
+					stockOption <- query.result.headOption
+					stockRow = stockOption.getOrElse(throw new Exception())
+				} yield {
+					stockRow.stock match {
+						case stock if stock >= quantity =>
+							go(t, stockRow.productStockId, stock)
+						case stock if stock < quantity =>
+							DBIO.successful((stock, false))
+						case _ => DBIO.successful((0, false))
+					}
+				}).flatten
+			case Nil => DBIO.successful((s, true))
 		}
+		db run go(is, 0, 0)
+	}
 	
 	def getProductStock(productId: Int): Future[List[StockResponseDto]] = {
 		def go(depth: Int, cs: StockResponseDto): Future[StockResponseDto] = {
-			getStocks(productId, depth, cs.productStockId) flatMap {
+			getProductOptionStock(productId, depth, cs.productStockId) flatMap {
 				case Nil => Future(Nil)
 				case h::t => (h::t) traverse (go(depth+1, _))
 			} map cs.setList
 		}
-		getStocks(productId, 0, 0) flatMap (_ traverse(go(1, _)))
-	}
-	
-	def insertProductStock(p: ProductDto): Future[_] = {
-		def go(os: List[ProductOptionDto], pid: Int, depth: Int): Future[_] = os match {
-			case h :: t => h.itemList traverse { item =>
-				val query = (ProductStock returning ProductStock.map(_.productStockId))
-				val row = ProductStockRow(p.productId, 0, 0, pid, item.name, depth)
-				db run (query += row) map (go(t, _, depth + 1)) }
-			case Nil => Future(pid)
-		}
-		go(p.optionList, 0, 0)
+		getProductOptionStock(productId, 0, 0) flatMap (_ traverse(go(1, _)))
 	}
 	
 	def updateStock(stockId: Int, adds: Int): Future[Int] = {
-		def go(stockId: Int, affRows: Int): Future[Int] = {
-			val ci = ProductStock.filter(_.productStockId === stockId)
-			db run (for {
-				stockOption <- ci.map(_.stock).result.headOption
-				updateOption = stockOption.map(stock => ci.map(_.stock).update(stock + adds))
+		def go(stockId: Int, affRows: Int): DBIOAction[Int,NoStream,Effect.All] = {
+			val temp = ProductStock.filter(_.productStockId === stockId)
+			(for {
+				stockOption <- temp.map(_.stock).result.headOption
+				updateOption = stockOption.map(stock => temp.map(_.stock).update(stock + adds))
 				affected <- updateOption.getOrElse(DBIO.successful(0))
-			} yield affected) flatMap { aff =>
-				db run ci.map(_.parentId).result.headOption flatMap ({
-					case Some(parentId) => go(parentId, affRows+aff)
-					case None => Future(affRows+aff)
-				})
-			}
+				parentIdOption <- affected match {
+					case aff: Int if aff == 1 =>
+						temp.map(_.parentId).result.headOption
+					case _ => DBIO.successful(None) }
+			} yield {
+				parentIdOption match {
+					case Some(parentId) => go(parentId, affRows + affected)
+					case None => DBIO.successful(affRows)
+				}
+			}).transactionally.flatten
 		}
-		go(stockId, 0)
+		db run go(stockId, 0)
 	}
 }
 
