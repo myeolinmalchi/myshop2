@@ -15,7 +15,7 @@ class ProductService (db: Database)(implicit ec: ExecutionContext) {
 	val categoryModel = new CategoryModel(db)
 	
 	def searchProducts(kw: String, code: String): Future[List[ProductDto]] =
-		productModel getProductsWithAll { product =>
+		productModel getProducts { product =>
 			(product.name like s"%${kw}%") && (product.categoryCode like s"${code}%") }
 			
 	def getProductCount(kw: String, code: String): Future[Int] =
@@ -30,11 +30,17 @@ class ProductService (db: Database)(implicit ec: ExecutionContext) {
 	
 	def searchProductsBy(kw: String, code: String,
 						 seq: Int, page: Int, size: Int): Future[List[ProductDto]] =
-		productModel.getProductsWithAllSortBy(page, size, orderBy(seq)){ p: Products =>
+		productModel.getProductsSortBy(page, size, orderBy(seq)){ p: Products =>
 			(p.name like s"%${kw}%") && (p.categoryCode like s"${code}%") }
 			
 	def getProductById(productId: Int): Future[ProductDto] =
 		productModel.getProductById(productId)
+	
+	def getProductStock(productId: Int): Future[List[StockResponseDto]] =
+		productModel getProductStock(productId)
+		
+	def getProductOptionStock(productId: Int, depth: Int, parentId: Int): Future[List[StockResponseDto]] =
+		productModel getProductOptionStock(productId, depth, parentId)
 	
 	def getMainCategories =
 		categoryModel.getMainCategories
