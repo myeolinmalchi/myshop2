@@ -5,6 +5,8 @@ import cats.implicits.catsStdTraverseFilterForList.traverse
 import cats.implicits.toTraverseOps
 import common.encryption._
 import dto._
+import java.sql.Timestamp
+import java.util.Date
 import javax.inject._
 import models.Tables._
 import scala.concurrent.{ExecutionContext, Future}
@@ -35,33 +37,59 @@ class CartModel(db: Database)(implicit ec: ExecutionContext) {
 		select[Carts, CartDto](CartDto.newInstance) { cart => cart.userId === userId }
 				.flatMap(_ traverse (cart => getItems(cart)))
 	
-	def getCartByCartId(implicit cartId: Int): Future[CartDto] =
-		selectOne[Carts, CartDto](CartDto.newInstance) { cart => cart.cartId === cartId }.flatMap {
-			case Some(cart) => getItems(cart)
-			case None => Future.failed(throw new Exception())
-		}
+//	def getCartByCartId(implicit cartId: Int): Future[CartDto] =
+//		selectOne[Carts, CartDto](CartDto.newInstance) { cart => cart.cartId === cartId }.flatMap {
+//			case Some(cart) => getItems(cart)
+//			case None => Future.failed(throw new Exception("장바구니를 불러오지 못했습니다."))
+//		}
+		
+	def getCartByCartId(implicit cartId: Int): Future[CartDto] = {
+		val cartException = new Exception("장바구니를 불러오지 못했습니다.")
+		val cartQuery = Carts.filter(_.cartId === cartId)
+		val detailQuery = (cid: Int) => CartDetails.filter(_.cartId === cid)
+		val itemQuery = (iid: Int) => ProductOptionItems.filter(_.productOptionItemId === iid)
+		
+		val query = for {
+			cartOption <- cartQuery.result.headOption
+			cart = cartOption.getOrElse(throw cartException)
+			cartDto = CartDto.newInstance(cart)
+			details <- detailQuery(cart.cartId).result
+			itemDtoList <- DBIO.sequence(details.toList map { detail =>
+				for {
+					itemOption <- itemQuery(detail.optionItemId.get).result.headOption
+					item = itemOption.getOrElse(throw cartException)
+				} yield ProductOptionItemDto.newInstance(item)
+			})
+		} yield cartDto.setList(itemDtoList)
+		db run query
+	}
 	
-	private def insertCart(cart: CartDto)(f: CartDto => Future[Int]) = cart.itemList match {
-		case Nil => Future.failed(new Exception())
+	
+	private def insertCart(cart: CartDto) = cart.itemList match {
 		case h::t => {
 			val surcharge = (h::t).map(_.surcharge).sum
 			val query = Carts returning Carts.map(_.cartId)
-			val row = CartsRow(cart.userId, 0,cart.name, cart.productId, cart.price, cart.quantity+surcharge, null)
-			db run (query+=row) map(id => cart.setId(id)) flatMap(f(_))
+			val row = CartsRow(cart.userId, 0,cart.name, cart.productId,
+				cart.price, cart.quantity+surcharge, new Timestamp(System.currentTimeMillis()))
+			(query += row)
 		}
 	}
 	
-	private def insertDetail(itemId: Int, cartId: Int) =
-		db run (CartDetails += CartDetailsRow(0, Some(cartId), Some(itemId)))
+	private def itemToRow(cartId: Int, item: ProductOptionItemDto) =
+		CartDetailsRow(0, Some(cartId), Some(item.productOptionItemId))
 		
 	def addCart(cart: CartDto): Future[Int]=
-		insertCart(cart) { cart =>
-			cart.itemList.traverse { item =>
-				insertDetail(item.productOptionItemId, cart.cartId)
-			} map (_.sum)
+		productModel getProductOptionsCount cart.productId flatMap {
+			case count if count == cart.itemList.size =>
+				db run (for {
+					cartId <- insertCart(cart)
+					itemResult =  cart.itemList.map(itemToRow(cartId.self, _))
+					affected <- CartDetails ++= itemResult
+				} yield affected.getOrElse(0)).transactionally
+			case _ => Future.failed(new Exception("옵션을 모두 선택하세요."))
 		}
-		
-	def deleteCart(cq: Int)(implicit cartId: Int): Future[Int] =
+	
+	def deleteCart(implicit cartId: Int): Future[Int] =
 		db run cartIdQuery.delete
 		
 	def addQuantity(implicit cartId: Int): Future[Int] = {
@@ -91,7 +119,7 @@ class CartModel(db: Database)(implicit ec: ExecutionContext) {
 	def updateQuantity(q: Int)(implicit cartId: Int): Future[Int] = q match {
 		case quantity if quantity > 0 =>
 			db run cartIdQuery.map(_.quantity).update(quantity)
-		case _ => Future.failed(new Exception())
+		case _ => Future.failed(new Exception("수량은 0보다 큰 값이어야 합니다."))
 	}
 	
 }
