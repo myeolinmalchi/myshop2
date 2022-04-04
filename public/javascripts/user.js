@@ -22,30 +22,6 @@ function register() {
         })
 }
 
-function login() {
-    const userDto = {
-        userId: document.querySelector('#userId').value,
-        userPw: document.querySelector('#userPw').value,
-        name: "",
-        email: "",
-        phonenumber: ""
-    }
-
-    fetch("/user/login", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Data-Type": "json"
-        },
-        body: JSON.stringify(userDto)
-    })
-        .then(response => response.json())
-        .then(json => {
-            if(json === true) location.href = "/user"
-            else alert(json.error)
-        });
-}
-
 function cartList(){
     const init = {
         method: 'GET',
@@ -59,14 +35,10 @@ function cartList(){
 }
 
 function search(){
-    const category = document.querySelector("select.category")
-    const code = category.options[category.selectedIndex].value
-    const keyword = document.querySelector("input[name='keyword']").value
+    let category = document.querySelector("select.category")
+    let code = category.options[category.selectedIndex].value
+    let keyword = document.querySelector("input[name='keyword']").value
 
-
-    fetch("/search/"+code+"/"+keyword)
-        .then(response => response.json())
-        .then(json => {
-            console.log(json)
-        });
+    const url = new URL("http://localhost:9000/search/"+code+"/"+keyword)
+    location.href = url.href
 }
