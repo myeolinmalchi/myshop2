@@ -25,7 +25,7 @@ class NonUserCartModel(db: Database)(implicit ec: ExecutionContext) {
 	private def getItems(cart: CartDto): Future[CartDto] =
 		db run CartDetails.filter(c => c.cartId === cart.cartId).result flatMap (_.traverse { cd =>
 			selectOne[ProductOptionItems, ProductOptionItemDto](ProductOptionItemDto.newInstance) { item =>
-				item.productOptionItemId === cd.optionItemId.get
+				item.productOptionItemId === cd.optionItemId
 			} map (_.get)
 		} map (items => cart.setList(items.toList)))
 	
