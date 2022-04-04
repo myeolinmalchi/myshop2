@@ -1,10 +1,10 @@
 package services
 
 import common.encryption._
-import dto.{AddressDto, CartDto, UserDto}
+import dto.{AddressDto, CartDto, OrderDto, UserDto}
 import javax.inject._
 import models.Tables._
-import models.{CartModel, ProductModel, UserModel}
+import models.{CartModel, OrderModel, ProductModel, UserModel}
 import scala.collection.mutable.Map
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
@@ -23,6 +23,7 @@ class UserService(db: Database)(implicit ec: ExecutionContext) {
 	private val userModel = new UserModel(db)
 	private val cartModel = new CartModel(db)
 	private val productModel = new ProductModel(db)
+	private val orderModel = new OrderModel(db)
 	
 	def login(userId: String, userPw: String): Future[Option[Boolean]] =
 		userModel.getUserById(userId) map {
@@ -83,8 +84,7 @@ class UserService(db: Database)(implicit ec: ExecutionContext) {
 	
 	def register(user: UserDto): Future[Option[String]] = {
 		accountValidation(user) transform {
-			case Success(result) =>
-				userModel insertUser user
+			case Success(result) => userModel insertUser user
 				Try(None)
 			case Failure(e) => Try(Some(e.getMessage))
 		}
@@ -100,27 +100,29 @@ class UserService(db: Database)(implicit ec: ExecutionContext) {
 		Future.failed(new Exception(s"재고가 부족합니다! (남은 수량: ${stock})"))
 	
 	def updateQuantity(q: Int)(implicit cartId: Int): Future[Int] =
-		cartModel getCartByCartId cartId flatMap { cart =>
-			println(cart.itemList.size)
-			val is = cart.itemList.map(_.productOptionItemId)
-			productModel checkStock(is, q) flatMap {
+		cartModel getItemIdsByCartId cartId flatMap { ids =>
+			productModel checkStock(ids, q) flatMap {
 				case (stock, false) => outOfStockException(stock)
 				case (_, true) => cartModel updateQuantity q
 			}
 		}
 	
-	def addCart(cart: CartDto): Future[Int] = {
-		val is = cart.itemList.map(_.productOptionItemId)
+	def addCart(cart: CartDto): Future[Int] = { val is = cart.itemList.map(_.productOptionItemId)
 		productModel checkStock(is, cart.quantity) flatMap {
 			case (stock, false) => outOfStockException(stock)
 			case (_, true) => cartModel addCart cart
 		}
 	}
 	
+	def newOrder(userId: String, cartIdList: List[Int]): Future[Int] =
+		cartModel newOrder(userId, cartIdList)
+		
+	def getOrderByUserId(userId: String): Future[List[OrderDto]] =
+		orderModel getOrdersByUserId(userId)
+	
 	def addQuantity(implicit cartId: Int): Future[Int] = cartModel addQuantity
 		
 	def subQuantity(implicit cartId: Int): Future[Int] = cartModel subQuantity
-	
 	
 	def getCarts(implicit userId: String): Future[List[CartDto]] =
 		cartModel getCartsByUserId
