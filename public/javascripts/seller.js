@@ -62,7 +62,15 @@ function getBase64(file) {
     });
 }
 
-async function addProduct(sellerId) {
+
+const registerButton = document.getElementById("register-button")
+
+registerButton.addEventListener('click', () => {
+    const name = orThrow(document, 'input[name="name"]')
+    addProduct("minsuk4820", name)
+})
+
+async function addProduct(sellerId, productName) {
     try {
         const imagesDiv = document.querySelector('div.images')
         const imageStrings = await Promise.all(
@@ -79,7 +87,6 @@ async function addProduct(sellerId) {
             }
         })
 
-
         const optionList = [...document.querySelectorAll('div.option')].map((option, index) => {
             const itemList = [...option.querySelectorAll('div.item')].map((item, index) => {
                 return {
@@ -87,8 +94,7 @@ async function addProduct(sellerId) {
                     productOptionItemId: 0,
                     name: orThrow(item, 'input[name="name"]'),
                     surcharge: Number(orThrow(item, 'input[name="surcharge"]')),
-                    stock: Number(orThrow(item, 'input[name="stock"]')),
-                    itemSequence: index + 1
+                    itemSequence: index+1
                 }
             })
             return {
@@ -104,7 +110,7 @@ async function addProduct(sellerId) {
         const category = categories.options[categories.selectedIndex].value
         const product = {
             productId: 0,
-            name: orThrow(document, 'input[name="name"]'),
+            name: productName,
             sellerId: sellerId,
             price: Number(orThrow(document, 'input[name="price"]')),
             categoryCode: category,
@@ -126,12 +132,12 @@ async function addProduct(sellerId) {
             .then(response => response.json())
             .then(json => {
                 if (json === true) {
-                    alert("상품이 등록되었습니다.")
+                    console.log("상품이 등록되었습니다.")
                     location.href = '/seller/product'
-                } else alert(json.error)
+                } else { alert(json.error)
+                    console.log(json.error)}
             });
     } catch (e) {
-        alert(e)
         console.log(e)
     }
 }
@@ -214,5 +220,16 @@ function nextCategories(target) {
                 catStack.push(newBox)
             }
             else target.className += ' last-category'
+        })
+}
+
+function getProducts() {
+    fetch("/seller/product")
+        .then(response => response.json())
+        .then(json => {
+            console.log(json)
+            json.forEach((product, index) => {
+
+            })
         })
 }

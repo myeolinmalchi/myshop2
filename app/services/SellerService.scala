@@ -94,14 +94,19 @@ class SellerService(db: Database)(implicit ec: ExecutionContext) {
 	def getSeller(sellerId: String): Future[SellerDto] =
 		sellerModel getSellerById(sellerId) map(_.getOrElse(throw new Exception()))
 		
-	def getProductList(implicit sellerId: String): Future[List[ProductDto]] =
-		productModel.getProductsWithAll(product => product.sellerId === sellerId)
-	
+	def getProductList(implicit sellerId: String): Future[List[ProductDto]] = {
+		productModel.getProducts(_.sellerId === sellerId)
+//		productModel.getProductsWithAll(product => product.sellerId === sellerId)
+	}
+
+//	def addProduct(sellerId: String, p: ProductDto): Future[_] =
+//		productModel.insertProductWithAll(p) flatMap productModel.insertProductStock
+		
 	def addProduct(sellerId: String, p: ProductDto): Future[_] =
-		productModel.insertProductWithAll(p) flatMap productModel.insertProductStock
+		productModel.insertProductWithAll(p)
 	
 	def searchProducts(keyword: String): Future[List[ProductDto]] =
-		productModel getProductsWithAll { product => product.name like s"%${keyword}%" }
+		productModel getProducts { product => product.name like s"%${keyword}%" }
 	
 	def getProductStock(productId: Int): Future[List[StockResponseDto]] =
 		productModel getProductStock(productId)

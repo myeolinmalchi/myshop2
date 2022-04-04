@@ -19,7 +19,7 @@ object SellerSessionModel {
 	def remSession(session: Session): Unit = sessions-=session
 	
 	def generateToken(sellerId: String, session: Session): String = {
-		val token = s"$sellerId-token-${UUID.randomUUID().toString}"
+		val token = s"$sellerId-seller-${UUID.randomUUID().toString}"
 		sessions.put(session, SellerSessionModel(token, sellerId, LocalDateTime.now().plusHours(9)))
 		token
 	}

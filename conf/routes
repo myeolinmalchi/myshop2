@@ -25,11 +25,16 @@ GET    /user/register              controllers.UserController.registerPage
 GET     /user/find                  controllers.UserController.findUserPage
 POST    /user/find/id               controllers.UserController.findId
 
-#POST    /user/carts                 controllers.UserController.addCart
+POST    /user/carts                 controllers.UserController.addCart
 GET     /user/carts                 controllers.UserController.cartList
+DELETE  /user/carts                 controllers.UserController.deleteCart
+PUT     /user/carts                 controllers.UserController.updateCartQuantity
+
 #POST    /user/addresses             controllers.UserController.addAddress
 #GET     /user/addresses             controllers.UserController.addressList
 
+POST    /user/order                 controllers.UserController.order
+GET     /user/order                 controllers.UserController.getOrders
 # Map for SellerController(/seller)
 GET     /seller                       controllers.SellerController.index
 
@@ -52,12 +57,13 @@ POST    /seller/product/register        controllers.SellerController.addProduct
 
 #GET     /seller/product/detail          controllers.SellerController.productDetail(product: dto.ProductDto)
 
-POST    /seller/product/stock           controllers.SellerController.getProductStock
+POST    /seller/product/stock           controllers.SellerController.getAllProductStock
 PUT     /seller/product/stock           controllers.SellerController.updateStock
 
 # Map for search(/search)
 GET     /search/:code/:keyword controllers.SearchController.search(code, keyword, page: Option[Int], size: Option[Int], seq:Option[Int])
 GET     /product/detail/:productId       controllers.SearchController.productDetail(productId: Int)
+POST    /product/detail/stock           controllers.SearchController.getOneProductOption
 
 #Map for Category(/category)
 GET     /category                       controllers.CategoryController.getMainCategories
