@@ -5,7 +5,7 @@ import javax.inject._
 import play.api.db.slick._
 import play.api.libs.json._
 import play.api.mvc._
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 import services.ProductService
 import slick.jdbc.JdbcProfile
@@ -32,44 +32,52 @@ class SearchController @Inject() (protected val dbConfigProvider: DatabaseConfig
 	
 	def search(code: String, keyword: String,
 			   page: Option[Int], size: Option[Int], seq: Option[Int]) = Action.async { implicit request =>
+			
 		val codeVal = if(code.equals("0")) "" else code
-		
 		def intOp(x: Option[Int], default: Int) = x match {
 			case Some(value) => value
 			case None => default
 		}
-		
 		val pageVal = intOp(page, 1)
 		val sizeVal = intOp(size, 48)
 		val seqVal = intOp(seq, 0)
 		
-		val st1 = System.nanoTime()
 		productService getProductCount(keyword, codeVal) transform {
-			case Success(count) => {
-				val ed1 = System.nanoTime()
-				val time = (ed1-st1)/1000000
-				println(s"걸린 시간 ${time}ms")
-				Try(count)
-			}
+			case Success(count) => Try(count)
 			case Failure(e) => Failure(e)
 		} flatMap { productNum =>
 			val st = System.nanoTime()
 			productService searchProductsBy(keyword, codeVal, seqVal, pageVal, sizeVal) transform{
-				case Success(products) => {
-					val ed = System.nanoTime()
-					val time = (ed-st)/1000000
-					println(s"상품 수: ${products.size} , 걸린 시간 ${time}ms")
-					Try(Ok(views.html.search(products, productNum/sizeVal+1,pageVal)))
-				}
+				case Success(products) => Try(Ok(views.html.search(products, productNum/sizeVal+1,pageVal)))
 				case Failure(e) => Try(Ok(Json.toJson(Map("error" -> e.getMessage))))
 			}
 		}
 	}
 	
 	def productDetail(productId: Int) = Action.async { implicit request =>
-		productService.getProductById(productId).transform {
-			case Success(result) => Try(Ok(Json.toJson(result)))
-			case Failure(e) => Try(Ok(Json.toJson(Map("error" -> e.getMessage))))
+		productService getProductOptionStock(productId, 0, 0) transform {
+			case Success(stocks) => Try(stocks)
+			case Failure(e) => Failure(e)
+		} flatMap { stocks =>
+			productService.getProductById(productId).transform {
+				case Success(result) => Try(Ok(views.html.product_detail(result)))
+				case Failure(e) => Try(Ok(Json.toJson(Map("error" -> e.getMessage))))
+			}
+		}
+	}
+	
+	def getOneProductOption = Action.async { implicit request =>
+		request.body.asJson match {
+			case Some(result) => {
+				val productId = (result \ "productId").as[Int]
+				val depth = (result \ "depth").as[Int]
+				val parentId = (result \ "parentId").as[Int]
+				productService getProductOptionStock(productId, depth, parentId) transform {
+					case Success(stocks) => Try(Ok(Json.toJson(stocks.filter(_.stock>0))))
+					case Failure(e) => Try(Ok(Json.toJson(Map("error" -> e.getMessage))))
+				}
+			}
+			case None => Future(Ok(Json.toJson(Map("error" -> "올바르지 않은 요청입니다."))))
 		}
 	}
 }
