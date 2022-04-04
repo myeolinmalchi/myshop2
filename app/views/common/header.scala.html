@@ -1,6 +1,4 @@
 @()(implicit request: RequestHeader, flash: Flash)
-
-<script src="@routes.Assets.versioned("javascripts/user.js")" type="text/javascript"></script>
 <div class="container px-0">
     <div class="d-flex flex-row align-items-center justify-content-end mb-1 pe-5 me-3">
         @request.session.get("sessionToken") match {
@@ -22,7 +20,7 @@
         </div>
         <div class="p-0" style="width: 400px;">
             <input name="keyword" class="form-control border-dark" type="text" placeholder="상품명으로 검색"
-            aria-label="Search" style="height: 40px" onkeyup="if(window.event.keyCode===13){search()}">
+            aria-label="Search" style="height: 40px" >
         </div>
         <div class="p-0">
             <button type="button" class="btn btn-outline-success position-relative btn-sm w-100" style="height: 40px"

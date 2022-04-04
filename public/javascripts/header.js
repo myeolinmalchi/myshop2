@@ -1,5 +1,5 @@
 const categoryBox = document.querySelector('div.category');
-const keywordBox = document.querySelector('input');
+const keywordBox = document.querySelector('input[name="keyword"]');
 
 window.onload = () => {
     fetch("/category")
@@ -14,9 +14,12 @@ window.onload = () => {
         })
 }
 
-keywordBox.addEventListener('submit', () => {
-    let category = document.querySelector("select.category")
-    let code = category.options[category.selectedIndex].value
-    let keyword = document.querySelector("input[name='keyword']").value
-    location.href = "/search/"+code+"/"+keyword
+keywordBox.addEventListener('keydown', (e) => {
+    if(e.keyCode === 13) {
+        let category = document.querySelector("select.category")
+        let code = category.options[category.selectedIndex].value
+        let keyword = document.querySelector("input[name='keyword']").value
+        console.log(keyword)
+        location.href = "/search/"+code+"/"+keyword
+    }
 })
