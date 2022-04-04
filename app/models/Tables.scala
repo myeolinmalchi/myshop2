@@ -14,35 +14,35 @@ trait Tables {
   import slick.jdbc.{GetResult => GR}
 
   /** DDL for all tables. Call .create to execute. */
-  lazy val schema: profile.SchemaDescription = Array(CartDetails.schema, Carts.schema, Categories.schema, NonUserCartDetails.schema, NonUserCarts.schema, OrderDetails.schema, Orders.schema, ProductImages.schema, ProductOptionItems.schema, ProductOptions.schema, Products.schema, ProductStock.schema, Qnas.schema, Reviews.schema, Sellers.schema, UserAddresses.schema, Users.schema).reduceLeft(_ ++ _)
+  lazy val schema: profile.SchemaDescription = Array(CartDetails.schema, Carts.schema, Categories.schema, NonUserCartDetails.schema, NonUserCarts.schema, OrderProductDetails.schema, OrderProducts.schema, Orders.schema, ProductImages.schema, ProductOptionItems.schema, ProductOptions.schema, Products.schema, ProductStock.schema, Qnas.schema, Reviews.schema, Sellers.schema, UserAddresses.schema, Users.schema).reduceLeft(_ ++ _)
   @deprecated("Use .schema instead of .ddl", "3.0")
   def ddl = schema
 
   /** Entity class storing rows of table CartDetails
    *  @param cartDetailId Database column cart_detail_id SqlType(INT), AutoInc, PrimaryKey
-   *  @param cartId Database column cart_id SqlType(INT), Default(None)
-   *  @param optionItemId Database column option_item_id SqlType(INT), Default(None) */
-  case class CartDetailsRow(cartDetailId: Int, cartId: Option[Int] = None, optionItemId: Option[Int] = None)
+   *  @param cartId Database column cart_id SqlType(INT)
+   *  @param optionItemId Database column option_item_id SqlType(INT) */
+  case class CartDetailsRow(cartDetailId: Int, cartId: Int, optionItemId: Int)
   /** GetResult implicit for fetching CartDetailsRow objects using plain SQL queries */
-  implicit def GetResultCartDetailsRow(implicit e0: GR[Int], e1: GR[Option[Int]]): GR[CartDetailsRow] = GR{
+  implicit def GetResultCartDetailsRow(implicit e0: GR[Int]): GR[CartDetailsRow] = GR{
     prs => import prs._
-    CartDetailsRow.tupled((<<[Int], <<?[Int], <<?[Int]))
+    CartDetailsRow.tupled((<<[Int], <<[Int], <<[Int]))
   }
   /** Table description of table cart_details. Objects of this class serve as prototypes for rows in queries. */
   class CartDetails(_tableTag: Tag) extends profile.api.Table[CartDetailsRow](_tableTag, Some("myshop2"), "cart_details") {
     def * = (cartDetailId, cartId, optionItemId) <> (CartDetailsRow.tupled, CartDetailsRow.unapply)
     /** Maps whole row to an option. Useful for outer joins. */
-    def ? = ((Rep.Some(cartDetailId), cartId, optionItemId)).shaped.<>({r=>import r._; _1.map(_=> CartDetailsRow.tupled((_1.get, _2, _3)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+    def ? = ((Rep.Some(cartDetailId), Rep.Some(cartId), Rep.Some(optionItemId))).shaped.<>({r=>import r._; _1.map(_=> CartDetailsRow.tupled((_1.get, _2.get, _3.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
 
     /** Database column cart_detail_id SqlType(INT), AutoInc, PrimaryKey */
     val cartDetailId: Rep[Int] = column[Int]("cart_detail_id", O.AutoInc, O.PrimaryKey)
-    /** Database column cart_id SqlType(INT), Default(None) */
-    val cartId: Rep[Option[Int]] = column[Option[Int]]("cart_id", O.Default(None))
-    /** Database column option_item_id SqlType(INT), Default(None) */
-    val optionItemId: Rep[Option[Int]] = column[Option[Int]]("option_item_id", O.Default(None))
+    /** Database column cart_id SqlType(INT) */
+    val cartId: Rep[Int] = column[Int]("cart_id")
+    /** Database column option_item_id SqlType(INT) */
+    val optionItemId: Rep[Int] = column[Int]("option_item_id")
 
     /** Foreign key referencing Carts (database name cart_details_ibfk_1) */
-    lazy val cartsFk = foreignKey("cart_details_ibfk_1", cartId, Carts)(r => Rep.Some(r.cartId), onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
+    lazy val cartsFk = foreignKey("cart_details_ibfk_1", cartId, Carts)(r => r.cartId, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
   }
   /** Collection-like TableQuery object for table CartDetails */
   lazy val CartDetails = new TableQuery(tag => new CartDetails(tag))
@@ -201,74 +201,107 @@ trait Tables {
   /** Collection-like TableQuery object for table NonUserCarts */
   lazy val NonUserCarts = new TableQuery(tag => new NonUserCarts(tag))
 
-  /** Entity class storing rows of table OrderDetails
-   *  @param orderId Database column order_id SqlType(INT), Default(None)
-   *  @param orderDetailId Database column order_detail_id SqlType(INT), AutoInc, PrimaryKey
-   *  @param productId Database column product_id SqlType(INT), Default(None)
-   *  @param name Database column name SqlType(VARCHAR), Length(200,true)
-   *  @param quantity Database column quantity SqlType(SMALLINT), Default(None)
-   *  @param orderDetailStatus Database column order_detail_status SqlType(SMALLINT), Default(None) */
-  case class OrderDetailsRow(orderId: Option[Int] = None, orderDetailId: Int, productId: Option[Int] = None, name: String, quantity: Option[Int] = None, orderDetailStatus: Option[Int] = None)
-  /** GetResult implicit for fetching OrderDetailsRow objects using plain SQL queries */
-  implicit def GetResultOrderDetailsRow(implicit e0: GR[Option[Int]], e1: GR[Int], e2: GR[String]): GR[OrderDetailsRow] = GR{
+  /** Entity class storing rows of table OrderProductDetails
+   *  @param orderProductId Database column order_product_id SqlType(INT)
+   *  @param orderProductDetailId Database column order_product_detail_id SqlType(INT), AutoInc, PrimaryKey
+   *  @param optionItemId Database column option_item_id SqlType(INT) */
+  case class OrderProductDetailsRow(orderProductId: Int, orderProductDetailId: Int, optionItemId: Int)
+  /** GetResult implicit for fetching OrderProductDetailsRow objects using plain SQL queries */
+  implicit def GetResultOrderProductDetailsRow(implicit e0: GR[Int]): GR[OrderProductDetailsRow] = GR{
     prs => import prs._
-    OrderDetailsRow.tupled((<<?[Int], <<[Int], <<?[Int], <<[String], <<?[Int], <<?[Int]))
+    OrderProductDetailsRow.tupled((<<[Int], <<[Int], <<[Int]))
   }
-  /** Table description of table order_details. Objects of this class serve as prototypes for rows in queries. */
-  class OrderDetails(_tableTag: Tag) extends profile.api.Table[OrderDetailsRow](_tableTag, Some("myshop2"), "order_details") {
-    def * = (orderId, orderDetailId, productId, name, quantity, orderDetailStatus) <> (OrderDetailsRow.tupled, OrderDetailsRow.unapply)
+  /** Table description of table order_product_details. Objects of this class serve as prototypes for rows in queries. */
+  class OrderProductDetails(_tableTag: Tag) extends profile.api.Table[OrderProductDetailsRow](_tableTag, Some("myshop2"), "order_product_details") {
+    def * = (orderProductId, orderProductDetailId, optionItemId) <> (OrderProductDetailsRow.tupled, OrderProductDetailsRow.unapply)
     /** Maps whole row to an option. Useful for outer joins. */
-    def ? = ((orderId, Rep.Some(orderDetailId), productId, Rep.Some(name), quantity, orderDetailStatus)).shaped.<>({r=>import r._; _2.map(_=> OrderDetailsRow.tupled((_1, _2.get, _3, _4.get, _5, _6)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+    def ? = ((Rep.Some(orderProductId), Rep.Some(orderProductDetailId), Rep.Some(optionItemId))).shaped.<>({r=>import r._; _1.map(_=> OrderProductDetailsRow.tupled((_1.get, _2.get, _3.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
 
-    /** Database column order_id SqlType(INT), Default(None) */
-    val orderId: Rep[Option[Int]] = column[Option[Int]]("order_id", O.Default(None))
-    /** Database column order_detail_id SqlType(INT), AutoInc, PrimaryKey */
-    val orderDetailId: Rep[Int] = column[Int]("order_detail_id", O.AutoInc, O.PrimaryKey)
-    /** Database column product_id SqlType(INT), Default(None) */
-    val productId: Rep[Option[Int]] = column[Option[Int]]("product_id", O.Default(None))
-    /** Database column name SqlType(VARCHAR), Length(200,true) */
-    val name: Rep[String] = column[String]("name", O.Length(200,varying=true))
-    /** Database column quantity SqlType(SMALLINT), Default(None) */
-    val quantity: Rep[Option[Int]] = column[Option[Int]]("quantity", O.Default(None))
-    /** Database column order_detail_status SqlType(SMALLINT), Default(None) */
-    val orderDetailStatus: Rep[Option[Int]] = column[Option[Int]]("order_detail_status", O.Default(None))
+    /** Database column order_product_id SqlType(INT) */
+    val orderProductId: Rep[Int] = column[Int]("order_product_id")
+    /** Database column order_product_detail_id SqlType(INT), AutoInc, PrimaryKey */
+    val orderProductDetailId: Rep[Int] = column[Int]("order_product_detail_id", O.AutoInc, O.PrimaryKey)
+    /** Database column option_item_id SqlType(INT) */
+    val optionItemId: Rep[Int] = column[Int]("option_item_id")
 
-    /** Foreign key referencing Orders (database name order_details_ibfk_2) */
-    lazy val ordersFk = foreignKey("order_details_ibfk_2", orderId, Orders)(r => Rep.Some(r.orderId), onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
-    /** Foreign key referencing Products (database name order_details_ibfk_1) */
-    lazy val productsFk = foreignKey("order_details_ibfk_1", productId, Products)(r => Rep.Some(r.productId), onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Restrict)
+    /** Foreign key referencing OrderProducts (database name FK__order_products) */
+    lazy val orderProductsFk = foreignKey("FK__order_products", orderProductId, OrderProducts)(r => r.orderProductId, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
+    /** Foreign key referencing ProductOptionItems (database name FK__product_option_items) */
+    lazy val productOptionItemsFk = foreignKey("FK__product_option_items", optionItemId, ProductOptionItems)(r => r.productOptionItemId, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
   }
-  /** Collection-like TableQuery object for table OrderDetails */
-  lazy val OrderDetails = new TableQuery(tag => new OrderDetails(tag))
+  /** Collection-like TableQuery object for table OrderProductDetails */
+  lazy val OrderProductDetails = new TableQuery(tag => new OrderProductDetails(tag))
+
+  /** Entity class storing rows of table OrderProducts
+   *  @param orderId Database column order_id SqlType(INT)
+   *  @param orderProductId Database column order_product_id SqlType(INT), AutoInc, PrimaryKey
+   *  @param productId Database column product_id SqlType(INT)
+   *  @param sellerId Database column seller_id SqlType(VARCHAR), Length(50,true), Default()
+   *  @param quantity Database column quantity SqlType(INT), Default(0)
+   *  @param address Database column address SqlType(VARCHAR), Length(50,true), Default(0)
+   *  @param state Database column state SqlType(INT), Default(0) */
+  case class OrderProductsRow(orderId: Int, orderProductId: Int, productId: Int, sellerId: String = "", quantity: Int = 0, address: String = "0", state: Int = 0)
+  /** GetResult implicit for fetching OrderProductsRow objects using plain SQL queries */
+  implicit def GetResultOrderProductsRow(implicit e0: GR[Int], e1: GR[String]): GR[OrderProductsRow] = GR{
+    prs => import prs._
+    OrderProductsRow.tupled((<<[Int], <<[Int], <<[Int], <<[String], <<[Int], <<[String], <<[Int]))
+  }
+  /** Table description of table order_products. Objects of this class serve as prototypes for rows in queries. */
+  class OrderProducts(_tableTag: Tag) extends profile.api.Table[OrderProductsRow](_tableTag, Some("myshop2"), "order_products") {
+    def * = (orderId, orderProductId, productId, sellerId, quantity, address, state) <> (OrderProductsRow.tupled, OrderProductsRow.unapply)
+    /** Maps whole row to an option. Useful for outer joins. */
+    def ? = ((Rep.Some(orderId), Rep.Some(orderProductId), Rep.Some(productId), Rep.Some(sellerId), Rep.Some(quantity), Rep.Some(address), Rep.Some(state))).shaped.<>({r=>import r._; _1.map(_=> OrderProductsRow.tupled((_1.get, _2.get, _3.get, _4.get, _5.get, _6.get, _7.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+
+    /** Database column order_id SqlType(INT) */
+    val orderId: Rep[Int] = column[Int]("order_id")
+    /** Database column order_product_id SqlType(INT), AutoInc, PrimaryKey */
+    val orderProductId: Rep[Int] = column[Int]("order_product_id", O.AutoInc, O.PrimaryKey)
+    /** Database column product_id SqlType(INT) */
+    val productId: Rep[Int] = column[Int]("product_id")
+    /** Database column seller_id SqlType(VARCHAR), Length(50,true), Default() */
+    val sellerId: Rep[String] = column[String]("seller_id", O.Length(50,varying=true), O.Default(""))
+    /** Database column quantity SqlType(INT), Default(0) */
+    val quantity: Rep[Int] = column[Int]("quantity", O.Default(0))
+    /** Database column address SqlType(VARCHAR), Length(50,true), Default(0) */
+    val address: Rep[String] = column[String]("address", O.Length(50,varying=true), O.Default("0"))
+    /** Database column state SqlType(INT), Default(0) */
+    val state: Rep[Int] = column[Int]("state", O.Default(0))
+
+    /** Foreign key referencing Orders (database name FK__orders) */
+    lazy val ordersFk = foreignKey("FK__orders", orderId, Orders)(r => r.orderId, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
+    /** Foreign key referencing Products (database name FK__products) */
+    lazy val productsFk = foreignKey("FK__products", productId, Products)(r => r.productId, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
+    /** Foreign key referencing Sellers (database name FK__sellers) */
+    lazy val sellersFk = foreignKey("FK__sellers", sellerId, Sellers)(r => r.sellerId, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
+  }
+  /** Collection-like TableQuery object for table OrderProducts */
+  lazy val OrderProducts = new TableQuery(tag => new OrderProducts(tag))
 
   /** Entity class storing rows of table Orders
-   *  @param userId Database column user_id SqlType(VARCHAR), Length(20,true), Default(None)
    *  @param orderId Database column order_id SqlType(INT), AutoInc, PrimaryKey
-   *  @param orderDate Database column order_date SqlType(DATETIME)
-   *  @param orderStatus Database column order_status SqlType(SMALLINT), Default(None) */
-  case class OrdersRow(userId: Option[String] = None, orderId: Int, orderDate: Option[java.sql.Timestamp], orderStatus: Option[Int] = None)
+   *  @param userId Database column user_id SqlType(VARCHAR), Length(100,true)
+   *  @param orderDate Database column order_date SqlType(TIMESTAMP) */
+  case class OrdersRow(orderId: Int, userId: String, orderDate: java.sql.Timestamp)
   /** GetResult implicit for fetching OrdersRow objects using plain SQL queries */
-  implicit def GetResultOrdersRow(implicit e0: GR[Option[String]], e1: GR[Int], e2: GR[Option[java.sql.Timestamp]], e3: GR[Option[Int]]): GR[OrdersRow] = GR{
+  implicit def GetResultOrdersRow(implicit e0: GR[Int], e1: GR[String], e2: GR[java.sql.Timestamp]): GR[OrdersRow] = GR{
     prs => import prs._
-    OrdersRow.tupled((<<?[String], <<[Int], <<?[java.sql.Timestamp], <<?[Int]))
+    OrdersRow.tupled((<<[Int], <<[String], <<[java.sql.Timestamp]))
   }
   /** Table description of table orders. Objects of this class serve as prototypes for rows in queries. */
   class Orders(_tableTag: Tag) extends profile.api.Table[OrdersRow](_tableTag, Some("myshop2"), "orders") {
-    def * = (userId, orderId, orderDate, orderStatus) <> (OrdersRow.tupled, OrdersRow.unapply)
+    def * = (orderId, userId, orderDate) <> (OrdersRow.tupled, OrdersRow.unapply)
     /** Maps whole row to an option. Useful for outer joins. */
-    def ? = ((userId, Rep.Some(orderId), orderDate, orderStatus)).shaped.<>({r=>import r._; _2.map(_=> OrdersRow.tupled((_1, _2.get, _3, _4)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+    def ? = ((Rep.Some(orderId), Rep.Some(userId), Rep.Some(orderDate))).shaped.<>({r=>import r._; _1.map(_=> OrdersRow.tupled((_1.get, _2.get, _3.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
 
-    /** Database column user_id SqlType(VARCHAR), Length(20,true), Default(None) */
-    val userId: Rep[Option[String]] = column[Option[String]]("user_id", O.Length(20,varying=true), O.Default(None))
     /** Database column order_id SqlType(INT), AutoInc, PrimaryKey */
     val orderId: Rep[Int] = column[Int]("order_id", O.AutoInc, O.PrimaryKey)
-    /** Database column order_date SqlType(DATETIME) */
-    val orderDate: Rep[Option[java.sql.Timestamp]] = column[Option[java.sql.Timestamp]]("order_date")
-    /** Database column order_status SqlType(SMALLINT), Default(None) */
-    val orderStatus: Rep[Option[Int]] = column[Option[Int]]("order_status", O.Default(None))
+    /** Database column user_id SqlType(VARCHAR), Length(100,true) */
+    val userId: Rep[String] = column[String]("user_id", O.Length(100,varying=true))
+    /** Database column order_date SqlType(TIMESTAMP) */
+    val orderDate: Rep[java.sql.Timestamp] = column[java.sql.Timestamp]("order_date")
 
-    /** Foreign key referencing Users (database name orders_ibfk_1) */
-    lazy val usersFk = foreignKey("orders_ibfk_1", userId, Users)(r => Rep.Some(r.userId), onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Restrict)
+    /** Foreign key referencing Users (database name FK__users) */
+    lazy val usersFk = foreignKey("FK__users", userId, Users)(r => r.userId, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Restrict)
   }
   /** Collection-like TableQuery object for table Orders */
   lazy val Orders = new TableQuery(tag => new Orders(tag))
@@ -424,16 +457,16 @@ trait Tables {
 
   /** Entity class storing rows of table ProductStock
    *  @param productId Database column product_id SqlType(INT)
-   *  @param stock Database column stock SqlType(INT)
+   *  @param stock Database column stock SqlType(INT UNSIGNED)
    *  @param productStockId Database column product_stock_id SqlType(INT), AutoInc, PrimaryKey
    *  @param parentId Database column parent_id SqlType(INT)
    *  @param productOptionItemId Database column product_option_item_id SqlType(INT)
    *  @param depth Database column depth SqlType(INT) */
-  case class ProductStockRow(productId: Int, stock: Int, productStockId: Int, parentId: Int, productOptionItemId: Int, depth: Int)
+  case class ProductStockRow(productId: Int, stock: Long, productStockId: Int, parentId: Int, productOptionItemId: Int, depth: Int)
   /** GetResult implicit for fetching ProductStockRow objects using plain SQL queries */
-  implicit def GetResultProductStockRow(implicit e0: GR[Int]): GR[ProductStockRow] = GR{
+  implicit def GetResultProductStockRow(implicit e0: GR[Int], e1: GR[Long]): GR[ProductStockRow] = GR{
     prs => import prs._
-    ProductStockRow.tupled((<<[Int], <<[Int], <<[Int], <<[Int], <<[Int], <<[Int]))
+    ProductStockRow.tupled((<<[Int], <<[Long], <<[Int], <<[Int], <<[Int], <<[Int]))
   }
   /** Table description of table product_stock. Objects of this class serve as prototypes for rows in queries. */
   class ProductStock(_tableTag: Tag) extends profile.api.Table[ProductStockRow](_tableTag, Some("myshop2"), "product_stock") {
@@ -443,8 +476,8 @@ trait Tables {
 
     /** Database column product_id SqlType(INT) */
     val productId: Rep[Int] = column[Int]("product_id")
-    /** Database column stock SqlType(INT) */
-    val stock: Rep[Int] = column[Int]("stock")
+    /** Database column stock SqlType(INT UNSIGNED) */
+    val stock: Rep[Long] = column[Long]("stock")
     /** Database column product_stock_id SqlType(INT), AutoInc, PrimaryKey */
     val productStockId: Rep[Int] = column[Int]("product_stock_id", O.AutoInc, O.PrimaryKey)
     /** Database column parent_id SqlType(INT) */
