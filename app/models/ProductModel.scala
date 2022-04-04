@@ -150,14 +150,31 @@ class ProductModel(db: Database)(implicit ec: ExecutionContext) {
 	def getProductOptionStock(productId: Int, depth: Int, parentId: Int): Future[List[StockResponseDto]] = {
 		val query = ProductStock.filter(s => s.productId === productId && s.depth === depth)
 		val f = (s: ProductStock#TableElementType) =>
-			StockResponseDto(s.productId, s.stock, s.productStockId, s.parentId, s.productOptionItemId, s.depth, Nil)
+			StockResponseDto(s.productId, s.stock.toInt, s.productStockId, s.parentId, s.productOptionItemId, s.depth,
+				Nil)
 		parentId match {
 			case 0 => db.run(query.result) map(_.toList map f)
 			case pid: Int => db.run(query.filter(s => s.parentId === parentId).result) map(_.toList map f)
 		}
 	}
 	
-	def checkStock(is: List[Int], quantity: Int): Future[(Int, Boolean)] =  {
+	def getStockIdQuery(is: List[Int]): DBIOAction[Int, NoStream, Effect.All] = {
+		def go(is: List[Int], parentId: Int): DBIOAction[Int, NoStream, Effect.All] = is match {
+			case h:: t =>
+				val query = ProductStock.filter { stock =>
+					stock.productOptionItemId === h && stock.parentId === parentId }
+				(for {
+					stockIdOption <- query.map(_.productStockId).result.headOption
+					stockId = stockIdOption.getOrElse(throw new Exception())
+				} yield go(t, stockId)).flatten
+			case Nil => DBIO.successful(parentId)
+		}
+		go(is, 0)
+	}
+	def getStockId(is: List[Int]): Future[Int] =
+		db run getStockIdQuery(is)
+	
+	def checkStockQuery(is: List[Int], quantity: Int): DBIOAction[(Int, Boolean),NoStream, Effect.All] =  {
 		def go(is: List[Int], parentId: Int, s: Int): DBIOAction[(Int, Boolean),NoStream,Effect.All] = is match {
 			case h::t =>
 				val query = ProductStock.filter { stock =>
@@ -168,16 +185,18 @@ class ProductModel(db: Database)(implicit ec: ExecutionContext) {
 				} yield {
 					stockRow.stock match {
 						case stock if stock >= quantity =>
-							go(t, stockRow.productStockId, stock)
+							go(t, stockRow.productStockId, stock.toInt)
 						case stock if stock < quantity =>
-							DBIO.successful((stock, false))
+							DBIO.successful((stock.toInt, false))
 						case _ => DBIO.successful((0, false))
 					}
 				}).flatten
 			case Nil => DBIO.successful((s, true))
 		}
-		db run go(is, 0, 0)
+		go(is, 0, 0)
 	}
+	def checkStock(is: List[Int], quantity: Int): Future[(Int, Boolean)] =
+		db run checkStockQuery(is, quantity)
 	
 	def getProductStock(productId: Int): Future[List[StockResponseDto]] = {
 		def go(depth: Int, cs: StockResponseDto): Future[StockResponseDto] = {
@@ -189,7 +208,7 @@ class ProductModel(db: Database)(implicit ec: ExecutionContext) {
 		getProductOptionStock(productId, 0, 0) flatMap (_ traverse(go(1, _)))
 	}
 	
-	def updateStock(stockId: Int, adds: Int): Future[Int] = {
+	def updateStockQuery(stockId: Int, adds: Int): DBIOAction[Int,NoStream,Effect.All] = {
 		def go(stockId: Int, affRows: Int): DBIOAction[Int,NoStream,Effect.All] = {
 			val temp = ProductStock.filter(_.productStockId === stockId)
 			(for {
@@ -207,7 +226,10 @@ class ProductModel(db: Database)(implicit ec: ExecutionContext) {
 				}
 			}).transactionally.flatten
 		}
-		db run go(stockId, 0)
+		go(stockId, 0)
 	}
+	def updateStock(stockId: Int, adds: Int): Future[Int] =
+		db run updateStockQuery(stockId, adds)
+	
 }
 
