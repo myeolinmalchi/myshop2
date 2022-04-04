@@ -9,14 +9,11 @@
     <h2>Seller Main Page</h2>
 
     @request.session.get("sessionToken")  match {
-        case Some(token) => {
+        case Some(token) if token.split("-")(1).equals("seller") => {
             <p>user: @token.split("-")(0)</p>
             <button onclick="location.href = '/seller/logout'">Logout</button>
             <button onclick="location.href = '/seller/product/register'">상품 등록</button>
-            <button onclick="location.href = '/seller/product'">내 상품 보기</button>
-        }
-        case None => {
-            <a href="@routes.SellerController.loginPage">Login</a>
-        }
+            <button onclick="location.href = '/seller/product'">내 상품 보기</button> }
+        case _ => { <a href="@routes.SellerController.loginPage">Login</a> }
     }
 }
