@@ -18,7 +18,5 @@ keywordBox.addEventListener('submit', () => {
     let category = document.querySelector("select.category")
     let code = category.options[category.selectedIndex].value
     let keyword = document.querySelector("input[name='keyword']").value
-
-    const url = new URL("http://localhost:9000/search/"+code+"/"+keyword)
-    location.href = url.href
+    location.href = "/search/"+code+"/"+keyword
 })
