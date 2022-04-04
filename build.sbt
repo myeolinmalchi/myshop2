@@ -17,5 +17,6 @@ libraryDependencies ++= Seq(
 	"mysql" % "mysql-connector-java" % "8.0.28",
 	"com.typesafe.slick" %% "slick-hikaricp" % "3.3.3",
 	"org.mindrot" % "jbcrypt" % "0.4",
-	"commons-codec" % "commons-codec" % "1.15"
+	"commons-codec" % "commons-codec" % "1.15",
+	"org.typelevel" %% "cats-core" % "2.7.0"
 )
