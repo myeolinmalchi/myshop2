@@ -5,7 +5,7 @@ import java.util.UUID
 import play.api.mvc.Session
 import scala.collection.mutable
 
-case class UserSessionModel(token: String, sellerId: String, expiration: LocalDateTime)
+case class UserSessionModel(token: String, userId: String, expiration: LocalDateTime)
 
 object UserSessionModel {
 	
@@ -17,7 +17,7 @@ object UserSessionModel {
 	def remSession(session: Session): Unit = sessions-=session
 	
 	def generateToken(userId: String, session: Session): String = {
-		val token = s"$userId-token-${UUID.randomUUID().toString}"
+		val token = s"$userId-user-${UUID.randomUUID().toString}"
 		sessions.put(session, UserSessionModel(token, userId, LocalDateTime.now().plusHours(9)))
 		token
 	}
