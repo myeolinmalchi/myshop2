@@ -39,6 +39,9 @@ class ProductService (db: Database)(implicit ec: ExecutionContext) {
 	def getProductStock(productId: Int): Future[List[StockResponseDto]] =
 		productModel getProductStock(productId)
 		
+	def getSellerId(productId: Int): Future[String] = ???
+	
+		
 	def getProductOptionStock(productId: Int, depth: Int, parentId: Int): Future[List[StockResponseDto]] =
 		productModel getProductOptionStock(productId, depth, parentId)
 	
