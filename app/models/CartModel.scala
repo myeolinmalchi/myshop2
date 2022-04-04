@@ -1,12 +1,8 @@
 package models
 
-import cats.data.Chain.catsDataTraverseFilterForChain.traverse
-import cats.implicits.catsStdTraverseFilterForList.traverse
 import cats.implicits.toTraverseOps
-import common.encryption._
 import dto._
 import java.sql.Timestamp
-import java.util.Date
 import javax.inject._
 import models.Tables._
 import scala.concurrent.{ExecutionContext, Future}
@@ -26,57 +22,116 @@ class CartModel(db: Database)(implicit ec: ExecutionContext) {
 	import common._
 	import productModel._
 	
+	type D[T] = DBIOAction[T, NoStream, Effect.All]
+	
 	private def getItems(cart: CartDto): Future[CartDto] =
 		db run CartDetails.filter(c => c.cartId === cart.cartId).result flatMap (_.traverse { cd =>
 			selectOne[ProductOptionItems, ProductOptionItemDto](ProductOptionItemDto.newInstance) { item =>
-				item.productOptionItemId === cd.optionItemId.get
+				item.productOptionItemId === cd.optionItemId
 			} map (_.get)
 		} map (items => cart.setList(items.toList)))
 	
 	def getCartsByUserId(implicit userId: String): Future[List[CartDto]] =
 		select[Carts, CartDto](CartDto.newInstance) { cart => cart.userId === userId }
 				.flatMap(_ traverse (cart => getItems(cart)))
-	
-//	def getCartByCartId(implicit cartId: Int): Future[CartDto] =
-//		selectOne[Carts, CartDto](CartDto.newInstance) { cart => cart.cartId === cartId }.flatMap {
-//			case Some(cart) => getItems(cart)
-//			case None => Future.failed(throw new Exception("장바구니를 불러오지 못했습니다."))
-//		}
 		
-	def getCartByCartId(implicit cartId: Int): Future[CartDto] = {
+	def getCartByCartId(implicit cartId: Int): Future[CartDto] =
+		db run getCartByCartIdQuery
+		
+	def getItemIdsByCartId(implicit cartId: Int): Future[List[Int]] =
+		db run CartDetails.filter(_.cartId === cartId).map(_.optionItemId).result map(_.toList)
+	
+	private def getCartByCartIdQuery(implicit cartId: Int): D[CartDto] = {
 		val cartException = new Exception("장바구니를 불러오지 못했습니다.")
 		val cartQuery = Carts.filter(_.cartId === cartId)
 		val detailQuery = (cid: Int) => CartDetails.filter(_.cartId === cid)
 		val itemQuery = (iid: Int) => ProductOptionItems.filter(_.productOptionItemId === iid)
 		
-		val query = for {
+		for {
 			cartOption <- cartQuery.result.headOption
 			cart = cartOption.getOrElse(throw cartException)
 			cartDto = CartDto.newInstance(cart)
 			details <- detailQuery(cart.cartId).result
 			itemDtoList <- DBIO.sequence(details.toList map { detail =>
 				for {
-					itemOption <- itemQuery(detail.optionItemId.get).result.headOption
+					itemOption <- itemQuery(detail.optionItemId).result.headOption
 					item = itemOption.getOrElse(throw cartException)
 				} yield ProductOptionItemDto.newInstance(item)
 			})
 		} yield cartDto.setList(itemDtoList)
-		db run query
 	}
+	
+	private def getSellerId(implicit cartId: Int): D[String] = {
+		val productIdQuery = Carts.filter(_.cartId === cartId).map(_.productId)
+		val sellerIdQuery = (pid: Int) => Products.filter(_.productId === pid ).map(_.sellerId)
+		for {
+			productIdOption <- productIdQuery.result.headOption
+			productId = productIdOption.getOrElse(0)
+			sellerIdOption <- sellerIdQuery(productId).result.headOption
+		} yield sellerIdOption.getOrElse(throw new Exception("판매자를 찾을 수 없습니다!"))
+	}
+	
+	private def insertOrder(userId: String): D[Int] = {
+		val query = Orders returning Orders.map(_.orderId)
+		val row = OrdersRow(0, userId, new Timestamp(System.currentTimeMillis()))
+		query += row
+	}
+	
+	private def insertOrderProduct(oid: Int, sid: String, cart: CartDto) = {
+		val query = OrderProducts returning OrderProducts.map(_.orderProductId)
+		val row = OrderProductsRow(oid, 0, cart.productId, sid, cart.quantity, "0")
+		query += row
+	}
+	
+	private def insertOrderProducts(oid: Int, carts: List[CartDto]) = DBIO.sequence {
+		carts map { cart =>
+			for {
+				sellerId <- getSellerId(cart.cartId)
+				orderProductId <- insertOrderProduct(oid, sellerId, cart)
+				affected <- insertOrderProductDetails(orderProductId.self, cart.itemList)
+			} yield affected.getOrElse(0)
+		}
+	}
+	
+	private def insertOrderProductDetails(pid: Int, items: List[ProductOptionItemDto]) = {
+		val rows = items.map(i => OrderProductDetailsRow(pid, 0, i.productOptionItemId))
+		OrderProductDetails ++= rows
+	}
+
+	def newOrder(userId: String, cartIdList: List[Int]): Future[Int] =
+		db run (for {
+			orderId <- insertOrder(userId)
+			carts <- DBIO.sequence(cartIdList map (cid => getCartByCartIdQuery(cid)))
+			aff1 <- insertOrderProducts(orderId.self,  carts)
+			aff2 <- DBIO.sequence(carts map updateStockWithValidation)
+			aff3 <- DBIO.sequence(cartIdList map(implicit id => cartIdQuery.delete))
+		} yield aff1.sum + aff2.sum + aff3.sum).transactionally
+		
+	def updateStockWithValidation(cart: CartDto): D[Int] =
+		(for {
+			checked <- productModel checkStockQuery(cart.itemList
+					.map(_.productOptionItemId), cart.quantity)
+		} yield checked match {
+			case (_, true) => for {
+				stockId <- productModel getStockIdQuery cart.itemList.map(_.productOptionItemId)
+				aff <- productModel updateStockQuery(stockId, -cart.quantity)
+			} yield aff
+			case (stock, false) =>
+				throw new Exception(s"'${cart.name}'의 재고가 부족합니다! (남은 수량: ${stock})")
+		}) flatten
 	
 	
 	private def insertCart(cart: CartDto) = cart.itemList match {
-		case h::t => {
+		case h::t =>
 			val surcharge = (h::t).map(_.surcharge).sum
 			val query = Carts returning Carts.map(_.cartId)
 			val row = CartsRow(cart.userId, 0,cart.name, cart.productId,
 				cart.price, cart.quantity+surcharge, new Timestamp(System.currentTimeMillis()))
-			(query += row)
-		}
+			query += row
 	}
 	
 	private def itemToRow(cartId: Int, item: ProductOptionItemDto) =
-		CartDetailsRow(0, Some(cartId), Some(item.productOptionItemId))
+		CartDetailsRow(0, cartId, item.productOptionItemId)
 		
 	def addCart(cart: CartDto): Future[Int]=
 		productModel getProductOptionsCount cart.productId flatMap {
@@ -121,5 +176,4 @@ class CartModel(db: Database)(implicit ec: ExecutionContext) {
 			db run cartIdQuery.map(_.quantity).update(quantity)
 		case _ => Future.failed(new Exception("수량은 0보다 큰 값이어야 합니다."))
 	}
-	
 }
