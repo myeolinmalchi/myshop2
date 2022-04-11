@@ -14,17 +14,29 @@ import slick.jdbc.MySQLProfile.api._
 class CategoryModel(db: Database)(implicit ec: ExecutionContext) {
 	
 	def getMainCategories =
-		db run sql"SELECT * FROM v_categories WHERE depth=0".as[(String, String)] map (_.toList)
+		db run sql"""
+				SELECT code, name
+				FROM v_categories
+				WHERE depth=0
+				""".as[(String, String)] map (_.toList)
 	
 	def getChildrens(code: String) = {
-		val query = s"SELECT a.* FROM v_categories a INNER JOIN (SELECT * FROM v_categories WHERE code='${code}') b" +
-				" WHERE a.code LIKE concat(b.code, '%') AND a.depth = b.depth+1"
-		db run sql"#$query".as[(String, String)] map (_.toList)
+		val query =
+			sql"""
+				SELECT a.code, a.name
+				FROM v_categories a INNER JOIN (SELECT * FROM v_categories WHERE code=${code}) b
+				WHERE a.code LIKE concat(b.code, '%') AND a.depth = b.depth+1
+				"""
+		db run query.as[(String, String)] map (_.toList)
 	}
 	
 	def getSiblings(code: String) = {
-		val query = s"SELECT a.* FROM v_categories a INNER JOIN (SELECT * FROM v_categories WHERE code='${code}') b" +
-				" WHERE substr(a.code,1,1) = substr(b.code,1,1) AND a.depth = b.depth"
-		db run sql"#$query".as[(String, String)] map (_.toList)
+		val query =
+			sql"""
+				SELECT a.code, a.name
+				FROM v_categories a INNER JOIN (SELECT * FROM v_categories WHERE code=${code}) b
+				WHERE substr(a.code,1,1) = substr(b.code,1,1) AND a.depth = b.depth
+			   """
+		db run query.as[(String, String)] map (_.toList)
 	}
 }
