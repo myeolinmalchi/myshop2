@@ -1,14 +1,12 @@
 package services
 
 import common.encryption._
-import dto.{AddressDto, CartDto, OrderDto, UserDto}
+import dto._
 import javax.inject._
 import models.Tables._
 import models.{CartModel, OrderModel, ProductModel, UserModel}
-import scala.collection.mutable.Map
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
 import slick.jdbc.MySQLProfile.api._
 
 /**
@@ -32,46 +30,45 @@ class UserService(db: Database)(implicit ec: ExecutionContext) {
 				else Some(false) // 비밀번호 불일치
 			case None => None // 존재하지 않는 계정
 		}
+		
+	def logintest(userId: String, userPw: String): Future[_] =
+		(userModel getUserPassword userId) flatMap {
+			case Some(pw) =>
+				if (pw.equals(SHA256.encrypt(userPw))) Future.successful()
+				else Future.failed(new Exception("비밀번호가 일치하지 않습니다"))
+			case None => Future.failed(new Exception("존재하지 않는 계정입니다."))
+		}
 	
 	def accountValidation(user: UserDto): Future[UserDto] = {
-		def patterns(implicit key: String) = Map (
-			"userId" -> "^[a-z]+[a-z0-9]{5,19}$",
-			"userPw" -> "^(?=.*\\d)(?=.*[a-zA-Z])[0-9a-zA-Z]{8,16}$",
-			"name" -> "^[ㄱ-힣]+$",
-			"email" -> "^[0-9a-zA-Z]([-_.]?[0-9a-zA-Z])*@[0-9a-zA-Z]([-_.]?[0-9a-zA-Z])*.[a-zA-Z]{2,3}$",
-			"phone" -> "^\\d{3}-\\d{3,4}-\\d{4}$"
-		)(key)
-		def noneMatchedMsg(implicit key: String): String = Map (
-			"userId" -> "유효하지 않은 아이디입니다.",
-			"userPw" -> "유효하지 않은 비밀번호입니다.",
-			"name"  -> "유효하지 않은 이름입니다.",
-			"email" -> "유효하지 않은 이메일입니다.",
-			"phone" -> "유효하지 않은 전화번호입니다."
-		)(key)
-		def checkPattern(str: String)(implicit key: String): Future[String] =
-			if (!str.matches(patterns))
-				Future.failed(new IllegalArgumentException(noneMatchedMsg))
-			else Future.successful(str)
+		import UserDto._
 		
-		def validUserId(userId: String): Future[String] =
-			checkPattern(userId)("userId") transform  {
-				case Success(userId) => Try(userId)
-				case Failure(e)	 => Failure(e)
-			} flatMap { userModel getUserById(_) flatMap ({
-				case None => Future.successful(userId)
-				case Some(_) => throw new IllegalArgumentException("이미 존재하는 계정입니다.")
-			})}
-		def validUserPw(userPw: String): Future[String] = checkPattern(userPw)("userPw")
-		def validName(name: String): Future[String] = checkPattern(name)("name")
-		def validEmail(email: String): Future[String] =
-			checkPattern(email)("email") transform  {
-				case Success(email) => Try(email)
-				case Failure(e)	 => Failure(e)
-			} flatMap { userModel getUserByEmail(_) flatMap ({
-				case None => Future successful(email)
-				case Some(_) => throw new IllegalArgumentException("이미 사용중인 이메일입니다.")
-			})}
-		def validPhone(phone: String): Future[String] = checkPattern(phone)("phone")
+		def checkPattern(key: String)(implicit str: String): Future[String] =
+			if (!str.matches(PATTERNS(key))) Future.failed(NONE_MATCH_EXCEPTION(key))
+			else Future.successful(str)
+			
+		def validUserId(implicit userId: String): Future[String] =
+			for {
+				patternCheck <- checkPattern(USER_ID)
+				existenceCheck <- userModel checkUserExist(patternCheck)
+			} yield existenceCheck match {
+				case None => userId
+				case Some(_) => throw OVERLAP_EXCEPTION(USER_ID)
+			}
+			
+		def validUserPw(implicit userPw: String): Future[String] = checkPattern(USER_PW)
+		
+		def validName(implicit name: String): Future[String] = checkPattern(NAME)
+		
+		def validEmail(implicit email: String): Future[String] =
+			for {
+				patternCheck <-checkPattern(EMAIL)
+				existenceCheck <- userModel checkEmailExist patternCheck
+			} yield existenceCheck match {
+				case None => email
+				case Some(_) => throw OVERLAP_EXCEPTION(EMAIL)
+			}
+			
+		def validPhone(implicit phone: String): Future[String] = checkPattern(PHONE)
 		
 		for {
 			userId <- validUserId(user.userId)
@@ -82,13 +79,15 @@ class UserService(db: Database)(implicit ec: ExecutionContext) {
 		} yield user
 	}
 	
-	def register(user: UserDto): Future[Option[String]] = {
-		accountValidation(user) transform {
-			case Success(result) => userModel insertUser user
-				Try(None)
-			case Failure(e) => Try(Some(e.getMessage))
+	def register(user: UserDto): Future[_] =
+		for {
+			user <- accountValidation(user)
+			aff <- userModel insertUser user
+		} yield {
+			if(aff == 1) ()
+			else new Exception("회원가입에 실패했습니다.")
 		}
-	}
+	
 	
 	def findId(email: String): Future[Option[String]] =
 		userModel getUserByEmail(email) map (_ map(_.userId))
@@ -107,7 +106,8 @@ class UserService(db: Database)(implicit ec: ExecutionContext) {
 			}
 		}
 	
-	def addCart(cart: CartDto): Future[Int] = { val is = cart.itemList.map(_.productOptionItemId)
+	def addCart(cart: CartDto): Future[Int] = {
+		val is = cart.itemList.map(_.productOptionItemId)
 		productModel checkStock(is, cart.quantity) flatMap {
 			case (stock, false) => outOfStockException(stock)
 			case (_, true) => cartModel addCart cart
@@ -136,4 +136,6 @@ class UserService(db: Database)(implicit ec: ExecutionContext) {
 	def getAddress(implicit userId: String): Future[Seq[AddressDto]] =
 		db.run(UserAddresses.filter(addr => addr.userId === userId).result).map(_.map(AddressDto(_)))
 	
+	def checkUserOrderedThisProduct(userId: String, productId: Int): Future[Option[ProductDto]] =
+		orderModel checkUserOrderedThisProduct(userId, productId)
 }
