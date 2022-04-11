@@ -122,8 +122,8 @@ class ProductModel(db: Database)(implicit ec: ExecutionContext) {
 		db run ProductOptions.filter(o => o.productId === productId)
 				.map(_.productOptionId).result map(_.toList.size)
 		
-	def getProductById(productId: Int): Future[ProductDto]= {
-		val query = for {
+	def getProductByIdQuery(productId: Int): DBIOAction[ProductDto, NoStream, Effect.All] =
+		for {
 			product <- productQuery(_.productId === productId).result.headOption
 			options <- optionQuery(productId).result
 			images <- imageQuery(productId).result
@@ -131,13 +131,14 @@ class ProductModel(db: Database)(implicit ec: ExecutionContext) {
 			optionDtoList <- toDto(options) { o: ProductOptionDto =>
 				for{items <- itemQuery(o.productOptionId).result
 					itemDtoList <- toDto(items) { i: ProductOptionItemDto =>  DBIO.successful(i) }
-				} yield o.setItems(itemDtoList) }
+					} yield o.setItems(itemDtoList) }
 			imageDtoList <- toDto(images) { i: ProductImageDto => DBIO.successful(i) }
 		} yield productDto
 				.setOptions(optionDtoList)
 				.setImages(imageDtoList)
-		db run query
-	}
+	
+	def getProductById(productId: Int): Future[ProductDto]=
+		db run getProductByIdQuery(productId)
 	
 	def insertProductWithAll(p: ProductDto): Future[Int] =
 		db run (for {
