@@ -59,7 +59,7 @@ class UserController @Inject() (protected val dbConfigProvider: DatabaseConfigPr
 		}
 		
 		
-		private case class WithUser(block: UserDto => Future[Result])
+		case class WithUser(block: UserDto => Future[Result])
 						   (implicit request: Request[AnyContent]){
 			def ifNot(result: => Future[Result]): Future[Result] =
 				extractUser(request) flatMap {
@@ -75,7 +75,7 @@ class UserController @Inject() (protected val dbConfigProvider: DatabaseConfigPr
 							.withSession(request.session - "sessionToken"))
 				}
 		}
-		private object WithUser {
+		object WithUser {
 			def apply(block: UserDto => Future[Result])
 					 (implicit request: Request[AnyContent]) = new WithUser(block)
 		}
@@ -104,7 +104,7 @@ class UserController @Inject() (protected val dbConfigProvider: DatabaseConfigPr
 						.flashing("error" -> "이미 로그인 중입니다."))
 			} ifNot block
 		
-		implicit case class CustomFuture[T](a: Future[T]) {
+		implicit class CustomFuture[T](a: Future[T]) {
 			private def orError(f: T => Result): Future[Result] =
 				a transform {
 					case Success(result) => Try(f(result))
