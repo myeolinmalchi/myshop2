@@ -6,6 +6,7 @@ import javax.inject.Singleton
 import models.Tables.{Sellers, Users}
 import scala.concurrent.{ExecutionContext, Future}
 import slick.jdbc.MySQLProfile.api._
+import play.api.Logger
 
 @Singleton
 class UserModel(db: Database)(implicit ec: ExecutionContext) {
@@ -16,6 +17,15 @@ class UserModel(db: Database)(implicit ec: ExecutionContext) {
 	
 	def getUserById(userId: String): Future[Option[UserDto]] =
 		selectOne[Users, UserDto](UserDto.newEntity){ user => user.userId === userId }
+		
+	def getUserPassword(userId: String): Future[Option[String]] =
+		db run Users.filter(_.userId === userId).map(_.userPw).result.headOption
+
+	def checkUserExist(userId: String): Future[Option[String]] =
+		db run Users.filter(_.userId === userId).map(_.userId).result.headOption
+	
+	def checkEmailExist(email: String): Future[Option[String]] =
+		db run Users.filter(_.email === email).map(_.email).result.headOption
 	
 	def getUserByEmail(email: String): Future[Option[UserDto]] =
 		selectOne[Users, UserDto](UserDto.newEntity){ user => user.email ===email }
