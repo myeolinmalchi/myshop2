@@ -1,0 +1,6 @@
+package dto
+
+class ReviewDto {
+
+	
+}
