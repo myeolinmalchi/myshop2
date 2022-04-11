@@ -4,7 +4,6 @@ const docQueryAll = (query) => document.querySelectorAll(query)
 const deleteButtons = docQueryAll("button[name='deleteButton']")
 const updateQuantityButtons = docQueryAll("button[name='updateQuantityButton']")
 
-const userId = document.getElementById("userId").value
 const orderButton = document.getElementById("orderButton")
 
 const deleteCart = (e) => {
@@ -37,10 +36,7 @@ const newOrder = (e) => {
                 "Content-Type": "application/json",
                 "Data-Type": "json"
             },
-            body: JSON.stringify({
-                userId: userId,
-                cartIdList: cartIdList
-            })
+            body: JSON.stringify({cartIdList: cartIdList})
         }).then(response => response.json())
             .then(json => {
                 if(json === true) {
