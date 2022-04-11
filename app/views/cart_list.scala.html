@@ -6,12 +6,6 @@
             <span class="h2 w-100"></span>
         </div>
 
-        @request.session.get("sessionToken") match {
-            case Some(token) if token.split("-")(1).equals("user") => {
-                <input type="hidden" id="userId" value="@token.split("-")(0)"> }
-            case None => { <input type="hidden" id="userId" value=""> }
-        }
-
         <div class="row w-75" style="float:none;margin:0 auto;">
             <table class="table table-bordered text-center">
                 <thead>
