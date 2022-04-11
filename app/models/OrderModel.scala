@@ -10,6 +10,8 @@ import scala.language.postfixOps
 import slick.jdbc.MySQLProfile.api._
 
 class OrderModel(db: Database)(implicit ec: ExecutionContext) {
+	
+	val productModel = new ProductModel(db)
 
 	object InnerApi {
 		val orderQuery = (uid: String) => Orders.filter(_.userId === uid)
@@ -58,6 +60,21 @@ class OrderModel(db: Database)(implicit ec: ExecutionContext) {
 			orders <- orderQuery(userId).result
 			orderDtoList <- ordersToDto(orders)
 		} yield orderDtoList)
+		
+	def checkUserOrderedThisProduct(userId: String, productId: Int): Future[Option[ProductDto]] =
+		db run (for {
+			products <- (for {
+				order <- orderQuery(userId)
+				product <- OrderProducts
+				if order.orderId == product.orderId
+			} yield product.productId).result
+			productIdOption = products.find(_ == productId)
+		} yield productIdOption match {
+			case Some(productId) =>
+				val query = productModel getProductByIdQuery productId
+				query.map(Some(_))
+			case None => DBIO.successful(None)
+		}).flatten
 		
 	def getOrderProductsBySellerId(sellerId: String): Future[List[OrderProductDto]] =
 		db run (for {
