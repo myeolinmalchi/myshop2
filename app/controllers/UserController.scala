@@ -21,7 +21,7 @@ class UserController @Inject() (cc: ControllerComponents,
 							   (implicit ec: ExecutionContext)
 		extends AbstractController(cc) with Logging{
 	
-	private implicit val defaultPage = routes.UserController.index
+	private implicit val defaultPage = routes.HomeController.index
 	
 	private object InnerApi {
 		// request body의 json 데이터에서 dto를 추출한다.
