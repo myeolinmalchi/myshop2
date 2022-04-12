@@ -15,8 +15,7 @@ import services.{NonUserService, UserService, UserServiceImpl}
 import slick.jdbc.JdbcProfile
 
 @Singleton
-class UserController @Inject() (val dbConfigProvider: DatabaseConfigProvider,
-								cc: ControllerComponents,
+class UserController @Inject() (cc: ControllerComponents,
 								userService: UserService,
 								nonUserService: NonUserService)
 							   (implicit ec: ExecutionContext)
