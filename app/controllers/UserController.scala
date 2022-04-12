@@ -21,7 +21,7 @@ class UserController @Inject() (cc: ControllerComponents,
 							   (implicit ec: ExecutionContext)
 		extends AbstractController(cc) with Logging{
 	
-	private implicit val defaultPage = routes.HomeController.index
+	private implicit val defaultPage = routes.UserController.index
 	
 	private object InnerApi {
 		// request body의 json 데이터에서 dto를 추출한다.
@@ -69,6 +69,12 @@ class UserController @Inject() (cc: ControllerComponents,
 					case None => result.map(_.withSession(request.session - "sessionToken"))
 				}
 			
+			def onlyForWithout(result: => Future[Result]): Future[Result] =
+				extractUser(request) flatMap {
+					case Some(user) => block(user)
+					case None => result
+				}
+			
 			def endWith: Future[Result] =
 				extractUser(request) flatMap {
 					case Some(user) => block(user)
@@ -104,7 +110,7 @@ class UserController @Inject() (cc: ControllerComponents,
 			WithUser {
 				_ => Future(Redirect(routes.HomeController.index)
 						.flashing("error" -> "이미 로그인 중입니다."))
-			} ifNot block
+			} onlyForWithout block
 		
 		implicit class CustomFuture[T](a: Future[T]) {
 			private def orError(f: T => Result): Future[Result] =
