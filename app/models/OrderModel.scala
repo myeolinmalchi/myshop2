@@ -5,13 +5,17 @@ import dto._
 import java.sql.Timestamp
 import javax.inject._
 import models.Tables._
+import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
+import slick.jdbc.JdbcProfile
 import slick.jdbc.MySQLProfile.api._
 
-class OrderModel(db: Database)(implicit ec: ExecutionContext) {
-	
-	val productModel = new ProductModel(db)
+@Singleton
+class OrderModel @Inject() (val dbConfigProvider: DatabaseConfigProvider,
+							productModel: ProductModel)
+						   (implicit ec: ExecutionContext)
+	extends HasDatabaseConfigProvider[JdbcProfile]{
 
 	object InnerApi {
 		val orderQuery = (uid: String) => Orders.filter(_.userId === uid)

@@ -18,10 +18,9 @@ import scala.util.{Failure, Success, Try}
  * application's home page.
  */
 @Singleton
-class CategoryController @Inject() (protected val dbConfigProvider: DatabaseConfigProvider,
-								cc: ControllerComponents)(implicit ec: ExecutionContext)
-		extends AbstractController(cc) with HasDatabaseConfigProvider[JdbcProfile]{
-	private val productService = new ProductService(db)
+class CategoryController @Inject() (cc: ControllerComponents,
+									productService: ProductService)
+								   (implicit ec: ExecutionContext) extends AbstractController(cc) {
 	
 	implicit val itemReads = Json.reads[ProductOptionItemDto]
 	implicit val imageRead = Json.reads[ProductImageDto]

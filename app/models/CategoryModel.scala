@@ -1,8 +1,10 @@
 package models
 
 import javax.inject._
+import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
+import slick.jdbc.JdbcProfile
 import slick.jdbc.MySQLProfile.api._
 
 // 카테고리에 대한 정보를 받아오는 클래스
@@ -11,7 +13,9 @@ import slick.jdbc.MySQLProfile.api._
 // TODO
 //  - db insertion 구현
 @Singleton
-class CategoryModel(db: Database)(implicit ec: ExecutionContext) {
+class CategoryModel @Inject() (val dbConfigProvider: DatabaseConfigProvider)
+							  (implicit ec: ExecutionContext)
+	extends HasDatabaseConfigProvider[JdbcProfile]{
 	
 	def getMainCategories =
 		db run sql"""

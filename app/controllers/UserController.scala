@@ -11,29 +11,32 @@ import play.api.mvc._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
-import services.{NonUserService, UserService}
+import services.{NonUserService, UserService, UserServiceImpl}
 import slick.jdbc.JdbcProfile
 
 @Singleton
-class UserController @Inject() (protected val dbConfigProvider: DatabaseConfigProvider,
-							    cc: ControllerComponents)(implicit ec: ExecutionContext)
-		extends AbstractController(cc) with HasDatabaseConfigProvider[JdbcProfile] with Logging{
+class UserController @Inject() (val dbConfigProvider: DatabaseConfigProvider,
+								cc: ControllerComponents,
+								userService: UserService,
+								nonUserService: NonUserService)
+							   (implicit ec: ExecutionContext)
+		extends AbstractController(cc) with Logging{
 	
-	private val userService = new UserService(db)
-	private val nonUserService = new NonUserService(db)
+	private implicit val defaultPage = routes.HomeController.index
 	
 	private object InnerApi {
 		// request body의 json 데이터에서 dto를 추출한다.
 		def withJsonDto[A](f: A => Future[Result])
-						  (implicit request: Request[AnyContent], reads: Reads[A]): Future[Result] = {
+						  (implicit request: Request[AnyContent],
+						   reads: Reads[A], defaultPage: Call): Future[Result] = {
 			request.body.asJson.map { body =>
 				Json.fromJson[A](body) match {
 					case JsSuccess(a, path) => f(a)
 					case e @JsError(_) =>
 						logger.info(s"Invalid request body detected: ${e.toString}")
-						Future.successful(Redirect(routes.UserController.loginPage))
+						Future.successful(Redirect(defaultPage))
 				}
-			}.getOrElse(Future.successful(Redirect(routes.UserController.loginPage)))
+			}.getOrElse(Future.successful(Redirect(defaultPage)))
 		}
 		
 		def withAnyJson(f: JsValue => Future[Result])
@@ -136,7 +139,7 @@ class UserController @Inject() (protected val dbConfigProvider: DatabaseConfigPr
 	
 	def login = Action.async { implicit request => withoutUser {
 		withJsonDto[UserDto] { user =>
-			(userService logintest (user.userId, user.userPw)) transform {
+			(userService login (user.userId, user.userPw)) transform {
 				case Success(_) =>
 					val token = UserSessionModel.generateToken(user.userId, request.session)
 					Try(Ok(Json.toJson(true)).withSession("sessionToken" -> token))

@@ -17,10 +17,9 @@ import slick.jdbc.MySQLProfile.api._
  * 작성일 2022-03-17
  **/
 @Singleton
-class SellerService(db: Database)(implicit ec: ExecutionContext) {
-	
-	val productModel = new ProductModel(db)
-	val sellerModel = new SellerModel(db)
+class SellerService @Inject() (productModel: ProductModel,
+							   sellerModel: SellerModel)
+							  (implicit ec: ExecutionContext) {
 	
 	def login(sellerId: String, sellerPw: String): Future[Option[Boolean]] =
 		sellerModel.getSellerById(sellerId) map {

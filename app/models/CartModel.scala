@@ -5,35 +5,44 @@ import dto._
 import java.sql.Timestamp
 import javax.inject._
 import models.Tables._
+import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
+import slick.jdbc.JdbcProfile
 import slick.jdbc.MySQLProfile.api._
 
 @Singleton
-class CartModel(db: Database)(implicit ec: ExecutionContext) {
-	
-	implicit val carts = Carts
-	val common = new CommonModelApi(db)
-	val productModel = new ProductModel(db)
+class CartModel @Inject() (val dbConfigProvider: DatabaseConfigProvider,
+						   productModel: ProductModel)
+						  (implicit ec: ExecutionContext)
+	extends HasDatabaseConfigProvider[JdbcProfile] {
 	
 	private def cartIdQuery(implicit cartId: Int) =  Carts.filter(_.cartId === cartId)
 	private def userIdQuery(implicit userId: String) = Carts.filter(_.userId === userId)
 	
-	import common._
-	import productModel._
-	
 	type D[T] = DBIOAction[T, NoStream, Effect.All]
 	
+	private def getItemsQuery(cart: CartDto): DBIOAction[CartDto, NoStream, Effect.Read] =
+		for {
+			details <- CartDetails.filter(_.cartId === cart.cartId).result
+			items <- DBIO.sequence(details.map { detail =>
+				val innerQuery = ProductOptionItems.filter(_.productOptionItemId === detail.optionItemId)
+				for {
+					itemOption <- innerQuery.result.headOption
+				} yield itemOption.map(ProductOptionItemDto.newInstance)
+			})
+			itemList = items.flatten.toList
+		} yield cart.setList(itemList)
+	
 	private def getItems(cart: CartDto): Future[CartDto] =
-		db run CartDetails.filter(c => c.cartId === cart.cartId).result flatMap (_.traverse { cd =>
-			selectOne[ProductOptionItems, ProductOptionItemDto](ProductOptionItemDto.newInstance) { item =>
-				item.productOptionItemId === cd.optionItemId
-			} map (_.get)
-		} map (items => cart.setList(items.toList)))
+		db run getItemsQuery(cart)
 	
 	def getCartsByUserId(implicit userId: String): Future[List[CartDto]] =
-		select[Carts, CartDto](CartDto.newInstance) { cart => cart.userId === userId }
-				.flatMap(_ traverse (cart => getItems(cart)))
+		db run (for {
+			carts <- Carts.filter(_.userId === userId).result
+			cartDtoList = carts.map(CartDto.newInstance).toList
+		} yield cartDtoList)
+	
 		
 	def getCartByCartId(implicit cartId: Int): Future[CartDto] =
 		db run getCartByCartIdQuery
@@ -119,7 +128,6 @@ class CartModel(db: Database)(implicit ec: ExecutionContext) {
 			case (stock, false) =>
 				throw new Exception(s"'${cart.name}'의 재고가 부족합니다! (남은 수량: ${stock})")
 		}) flatten
-	
 	
 	private def insertCart(cart: CartDto) = cart.itemList match {
 		case h::t =>

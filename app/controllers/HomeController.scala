@@ -14,11 +14,10 @@ import slick.jdbc.JdbcProfile
  * application's home page.
  */
 @Singleton
-class HomeController @Inject() (protected val dbConfigProvider: DatabaseConfigProvider,
-                                      cc: ControllerComponents)(implicit ec: ExecutionContext)
-        extends AbstractController(cc) with HasDatabaseConfigProvider[JdbcProfile]{
-    private val productService = new ProductService(db)
-    
+class HomeController @Inject() (cc: ControllerComponents,
+                                productService: ProductService)
+                               (implicit ec: ExecutionContext)
+        extends AbstractController(cc) {
     implicit val itemReads = Json.reads[ProductOptionItemDto]
     implicit val imageRead = Json.reads[ProductImageDto]
     implicit val optionReads = Json.reads[ProductOptionDto]

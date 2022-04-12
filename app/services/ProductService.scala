@@ -9,10 +9,9 @@ import slick.jdbc.MySQLProfile.api._
 import javax.inject._
 
 @Singleton
-class ProductService (db: Database)(implicit ec: ExecutionContext) {
-	
-	val productModel = new ProductModel(db)
-	val categoryModel = new CategoryModel(db)
+class ProductService @Inject() (productModel: ProductModel,
+								categoryModel: CategoryModel)
+							   (implicit ec: ExecutionContext) {
 	
 	def searchProducts(kw: String, code: String): Future[List[ProductDto]] =
 		productModel getProducts { product =>
@@ -45,12 +44,13 @@ class ProductService (db: Database)(implicit ec: ExecutionContext) {
 	def getProductOptionStock(productId: Int, depth: Int, parentId: Int): Future[List[StockResponseDto]] =
 		productModel getProductOptionStock(productId, depth, parentId)
 	
-	def getMainCategories =
+	def getMainCategories: Future[List[(String, String)]] =
 		categoryModel.getMainCategories
 	
-	def getChildrenCategories(code: String) =
+	def getChildrenCategories(code: String): Future[List[(String, String)]] =
 		categoryModel.getChildrens(code)
 	
-	def getSiblingCategories(code: String) =
+	def getSiblingCategories(code: String): Future[List[(String, String)]] =
 		categoryModel.getSiblings(code)
+	
 }

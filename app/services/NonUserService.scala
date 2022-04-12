@@ -14,10 +14,9 @@ import slick.jdbc.MySQLProfile.api._
  * 작성일 2022-03-17
  **/
 @Singleton
-class NonUserService(db: Database)(implicit ec: ExecutionContext) {
-	
-	val cartModel = new NonUserCartModel(db)
-	val productModel = new ProductModel(db)
+class NonUserService @Inject() (cartModel: NonUserCartModel,
+								productModel: ProductModel)
+							   (implicit ec: ExecutionContext) {
 	
 	def addQuantity(implicit cartId: Int): Future[Int] = cartModel addQuantity
 	

@@ -14,12 +14,10 @@ import services.{ProductService, SellerService}
 import slick.jdbc.JdbcProfile
 
 @Singleton
-class SellerController @Inject() (protected val dbConfigProvider: DatabaseConfigProvider,
-								cc: ControllerComponents)(implicit ec: ExecutionContext)
-		extends AbstractController(cc) with HasDatabaseConfigProvider[JdbcProfile] {
-	
-	private val sellerService = new SellerService(db)
-	private val productService = new ProductService(db)
+class SellerController @Inject() (cc: ControllerComponents,
+								  sellerService: SellerService,
+								  productService: ProductService)
+								 (implicit ec: ExecutionContext) extends AbstractController(cc) {
 	
 	private object InnerApi {
 		def withJsonBody[A](f: A => Future[Result])(implicit request: Request[AnyContent], reads: Reads[A]): Future[Result] = {

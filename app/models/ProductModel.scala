@@ -4,20 +4,16 @@ import cats.implicits._
 import dto._
 import javax.inject._
 import models.Tables._
+import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
+import slick.jdbc.JdbcProfile
 import slick.jdbc.MySQLProfile.api._
 
 @Singleton
-class ProductModel(db: Database)(implicit ec: ExecutionContext) {
-	
-	implicit val products = Products
-	implicit val options = ProductOptions
-	implicit val items = ProductOptionItems
-	implicit val images = ProductImages
-	
-	private val commonApi = new CommonModelApi(db)
-	import commonApi._
+class ProductModel @Inject() (val dbConfigProvider: DatabaseConfigProvider)
+							 (implicit ec: ExecutionContext)
+	extends HasDatabaseConfigProvider[JdbcProfile] {
 	
 	private object InnerApi {
 		
@@ -172,6 +168,7 @@ class ProductModel(db: Database)(implicit ec: ExecutionContext) {
 		}
 		go(is, 0)
 	}
+	
 	def getStockId(is: List[Int]): Future[Int] =
 		db run getStockIdQuery(is)
 	
@@ -196,6 +193,7 @@ class ProductModel(db: Database)(implicit ec: ExecutionContext) {
 		}
 		go(is, 0, 0)
 	}
+	
 	def checkStock(is: List[Int], quantity: Int): Future[(Int, Boolean)] =
 		db run checkStockQuery(is, quantity)
 	
@@ -229,6 +227,7 @@ class ProductModel(db: Database)(implicit ec: ExecutionContext) {
 		}
 		go(stockId, 0)
 	}
+	
 	def updateStock(stockId: Int, adds: Int): Future[Int] =
 		db run updateStockQuery(stockId, adds)
 	
