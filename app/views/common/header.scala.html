@@ -2,7 +2,7 @@
 <div class="container px-0">
     <div class="d-flex flex-row align-items-center justify-content-end mb-1 pe-5 me-3">
         @request.session.get("sessionToken") match {
-            case Some(token) if token.split("-")(1).equals("user") => {
+            case Some(token) /*if token.split("-")(1).equals("user")*/ => {
                 <a href="/user/logout" class="float-end text-secondary small"><u>로그아웃</u></a> }
             case _ => {
                 <a href="/user/login" class="float-end text-secondary small"><u>로그인/회원가입</u></a> }

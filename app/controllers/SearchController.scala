@@ -20,16 +20,6 @@ class SearchController @Inject() (cc: ControllerComponents,
 								 (implicit ec: ExecutionContext)
 		extends AbstractController(cc) {
 	
-	implicit val itemReads = Json.reads[ProductOptionItemDto]
-	implicit val imageRead = Json.reads[ProductImageDto]
-	implicit val optionReads = Json.reads[ProductOptionDto]
-	implicit val productReads = Json.reads[ProductDto]
-	
-	implicit val itemWrites = Json.writes[ProductOptionItemDto]
-	implicit val imageWrite = Json.writes[ProductImageDto]
-	implicit val optionWrites = Json.writes[ProductOptionDto]
-	implicit val productWrites = Json.writes[ProductDto]
-	
 	def search(code: String, keyword: String,
 			   page: Option[Int], size: Option[Int], seq: Option[Int]) = Action.async { implicit request =>
 			

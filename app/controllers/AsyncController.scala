@@ -45,5 +45,4 @@ class AsyncController @Inject()(cc: ControllerComponents, actorSystem: ActorSyst
     }(actorSystem.dispatcher) // run scheduled tasks using the actor system's dispatcher
     promise.future
   }
-
 }

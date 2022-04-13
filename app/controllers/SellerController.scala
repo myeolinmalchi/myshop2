@@ -4,6 +4,7 @@ import dto._
 import java.time.LocalDateTime
 import javax.inject._
 import models.SellerSessionModel
+import play.api.{Logger, Logging}
 import play.api.db.slick._
 import play.api.libs.json._
 import play.api.mvc._
@@ -17,10 +18,11 @@ import slick.jdbc.JdbcProfile
 class SellerController @Inject() (cc: ControllerComponents,
 								  sellerService: SellerService,
 								  productService: ProductService)
-								 (implicit ec: ExecutionContext) extends AbstractController(cc) {
+								 (implicit ec: ExecutionContext) extends AbstractController(cc) with Logging{
 	
 	private object InnerApi {
-		def withJsonBody[A](f: A => Future[Result])(implicit request: Request[AnyContent], reads: Reads[A]): Future[Result] = {
+		def withJsonBody[A](f: A => Future[Result])
+						   (implicit request: Request[AnyContent], reads: Reads[A]): Future[Result] = {
 			request.body.asJson.map { body =>
 				Json.fromJson[A](body) match {
 					case JsSuccess(a, path) => f(a)

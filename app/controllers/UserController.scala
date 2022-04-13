@@ -234,7 +234,6 @@ class UserController @Inject() (cc: ControllerComponents,
 		} endWith
 	}
 	
-	
 	def getOrders = Action.async { implicit request =>
 		withUser { user =>
 			userService.getOrderByUserId(user.userId) getOrError

@@ -15,8 +15,6 @@ class SellerModel @Inject() (val dbConfigProvider: DatabaseConfigProvider)
 				 (implicit ec: ExecutionContext)
 	extends HasDatabaseConfigProvider[JdbcProfile] {
 	
-	implicit val sellers = Sellers
-	
 	def getSellerById(sellerId: String): Future[Option[SellerDto]] =
 		db run (for {
 			sellerRowOption <- Sellers.filter(_.sellerId === sellerId).result.headOption
