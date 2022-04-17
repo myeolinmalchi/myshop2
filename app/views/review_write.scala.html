@@ -1,0 +1,10 @@
+@()(implicit request: RequestHeader, flash: Flash)
+
+@main("write review") {
+    <header>
+        @views.html.common.header()
+    </header>
+
+    <input type="text" id="title">
+    <textarea name="content" id="content" cols="30" rows="30"></textarea>
+}
