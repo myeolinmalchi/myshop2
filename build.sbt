@@ -20,3 +20,5 @@ libraryDependencies ++= Seq(
 	"commons-codec" % "commons-codec" % "1.15",
 	"org.typelevel" %% "cats-core" % "2.7.0"
 )
+
+libraryDependencies += "com.github.jwt-scala" %% "jwt-play-json" % "9.0.5"
