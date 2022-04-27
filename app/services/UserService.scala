@@ -1,9 +1,10 @@
 package services
 
-import dto.{AddressDto, CartDto, OrderDto, ProductDto, UserDto}
+import com.google.inject.ImplementedBy
+import dto.{AddressDto, CartDto, OrderDto, ProductDto, ReviewDto, UserDto}
 import scala.concurrent.Future
 
-//@ImplementedBy(classOf[UserServiceImpl])
+@ImplementedBy(classOf[UserServiceImpl])
 trait UserService {
 	
 	def login(userId: String, userPw: String): Future[_]
@@ -20,6 +21,8 @@ trait UserService {
 	def getCart(implicit cartId: Int): Future[CartDto]
 	def deleteCart(implicit cartId: Int): Future[Int]
 //	def getAddress(implicit userId: String): Future[Seq[AddressDto]]
-	def checkUserOrderedThisProduct(userId: String, productId: Int): Future[Option[ProductDto]]
+	def checkUserOrderedThisProduct(userId: String, productId: Int): Future[_]
+	def insertReview(review: ReviewDto): Future[Int]
+	def getReviews(userId: String): Future[List[ReviewDto]]
 	
 }

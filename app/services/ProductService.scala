@@ -1,7 +1,7 @@
 package services
 
 import dto._
-import models.{CategoryModel, ProductModel}
+import models.{CategoryModel, ProductModel, ReviewModel}
 import models.Tables.Products
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
@@ -10,7 +10,8 @@ import javax.inject._
 
 @Singleton
 class ProductService @Inject() (productModel: ProductModel,
-								categoryModel: CategoryModel)
+								categoryModel: CategoryModel,
+								reviewModel: ReviewModel)
 							   (implicit ec: ExecutionContext) {
 	
 	def searchProducts(kw: String, code: String): Future[List[ProductDto]] =
@@ -34,13 +35,15 @@ class ProductService @Inject() (productModel: ProductModel,
 			
 	def getProductById(productId: Int): Future[ProductDto] =
 		productModel.getProductById(productId)
+		
+	def getReviewsByProductId(productId: Int): Future[List[ReviewDto]] =
+		reviewModel getReviewsByProductId productId
 	
 	def getProductStock(productId: Int): Future[List[StockResponseDto]] =
 		productModel getProductStock(productId)
 		
 	def getSellerId(productId: Int): Future[String] = ???
 	
-		
 	def getProductOptionStock(productId: Int, depth: Int, parentId: Int): Future[List[StockResponseDto]] =
 		productModel getProductOptionStock(productId, depth, parentId)
 	

@@ -1,32 +1,23 @@
-package services
+package services.seller
 
-import common.encryption._
-import dto._
-import javax.inject._
+import common.encryption.SHA256
+import dto.SellerDto
+import javax.inject.Inject
 import models.{ProductModel, SellerModel}
 import scala.collection.mutable.Map
 import scala.concurrent.{ExecutionContext, Future}
-import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
-import slick.jdbc.MySQLProfile.api._
 
-/**
- * 판매자별 상품 CRUD 및 판매자 계정 CRUD
- * @author minsuk
- * @version 1.0.0
- * 작성일 2022-03-17
- **/
-@Singleton
-class SellerService @Inject() (productModel: ProductModel,
-							   sellerModel: SellerModel)
-							  (implicit ec: ExecutionContext) {
+class AccountServiceImpl @Inject() (sellerModel: SellerModel)
+								   (implicit ec: ExecutionContext)
+	extends AccountService {
 	
-	def login(sellerId: String, sellerPw: String): Future[Option[Boolean]] =
-		sellerModel.getSellerById(sellerId) map {
-			case Some(u) =>
-				if (u.sellerPw.equals(SHA256.encrypt(sellerPw))) Some(true) // 로그인 성공
-				else Some(false) // 비밀번호 불일치
-			case None => None // 존재하지 않는 계정
+	override def login(implicit seller: SellerDto): Future[_] =
+		(sellerModel getSellerPassword seller.sellerId) flatMap {
+			case Some(pw) =>
+				if(pw.equals(SHA256.encrypt(seller.sellerPw))) Future.successful()
+				else Future.failed(new Exception("비밀번호가 일치하지 않습니다."))
+			case None => Future.failed(new Exception("존재하지 않는 계정입니다."))
 		}
 	
 	def accountValidation(seller: SellerDto): Future[SellerDto] = {
@@ -78,40 +69,19 @@ class SellerService @Inject() (productModel: ProductModel,
 		} yield seller
 	}
 	
-	def register(seller: SellerDto): Future[Option[String]] = {
-		accountValidation(seller) transform {
-			case Success(result) =>
-				sellerModel insertSeller seller
-				Try(None)
-			case Failure(e) => Try(Some(e.getMessage))
-		}
-	}
-	
-	def checkOwnProduct(sellerId: String, productId: Int): Future[Boolean] =
-		productModel getSellerByProductId productId map {
-			case Some(id) => id == sellerId
-			case None => false
+	override def register(implicit seller: SellerDto): Future[_] =
+		for {
+			seller <- accountValidation(seller)
+			aff <- sellerModel insertSeller seller
+		} yield {
+			if(aff == 1) ()
+			else new Exception("회원가입에 실패했습니다.")
 		}
 	
-	def findId(email: String): Future[Option[String]] =
+	override def findId(email: String): Future[Option[String]] =
 		sellerModel getSellerByEmail(email) map (_ map(_.sellerId))
-		
-	def getSeller(sellerId: String): Future[SellerDto] =
-		sellerModel getSellerById sellerId map(_.getOrElse(throw new Exception()))
-		
-	def getProductList(implicit sellerId: String): Future[List[ProductDto]] =
-		productModel.getProducts(_.sellerId === sellerId)
-		
-	def addProduct(sellerId: String, p: ProductDto): Future[_] =
-		productModel.insertProductWithAll(p)
 	
-	def searchProducts(keyword: String): Future[List[ProductDto]] =
-		productModel getProducts { product => product.name like s"%${keyword}%" }
-	
-	def getProductStock(productId: Int): Future[List[StockResponseDto]] =
-		productModel getProductStock(productId)
+	override def getSellerOption(sellerId: String): Future[Option[SellerDto]] =
+		sellerModel getSellerById sellerId
 		
-	def updateStock(stockId: Int, adds: Int): Future[Int] =
-		productModel updateStock(stockId, adds)
-	
 }

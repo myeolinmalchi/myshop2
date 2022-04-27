@@ -4,7 +4,7 @@ import common.encryption._
 import dto._
 import javax.inject._
 import models.Tables._
-import models.{CartModel, OrderModel, ProductModel, UserModel}
+import models.{CartModel, OrderModel, ProductModel, ReviewModel, UserModel}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
@@ -21,7 +21,8 @@ import slick.jdbc.MySQLProfile.api._
 class UserServiceImpl @Inject() (cartModel: CartModel,
 								 productModel: ProductModel,
 								 orderModel: OrderModel,
-								 userModel: UserModel)
+								 userModel: UserModel,
+								 reviewModel: ReviewModel)
 								(implicit ec: ExecutionContext) extends UserService {
 	
 	def login(userId: String, userPw: String): Future[_] =
@@ -42,7 +43,7 @@ class UserServiceImpl @Inject() (cartModel: CartModel,
 		def validUserId(implicit userId: String): Future[String] =
 			for {
 				patternCheck <- checkPattern(USER_ID)
-				existenceCheck <- userModel checkUserExist(patternCheck)
+				existenceCheck <- userModel checkUserExist patternCheck
 			} yield existenceCheck match {
 				case None => userId
 				case Some(_) => throw OVERLAP_EXCEPTION(USER_ID)
@@ -64,11 +65,11 @@ class UserServiceImpl @Inject() (cartModel: CartModel,
 		def validPhone(implicit phone: String): Future[String] = checkPattern(PHONE)
 		
 		for {
-			userId <- validUserId(user.userId)
-			userPw <- validUserPw(user.userPw)
-			name <- validName(user.name)
-			email <- validEmail(user.email)
-			phone <- validPhone(user.phonenumber)
+			userId <- validUserId(user.userId.get)
+			userPw <- validUserPw(user.userPw.get)
+			name <- validName(user.name.get)
+			email <- validEmail(user.email.get)
+			phone <- validPhone(user.phonenumber.get)
 		} yield user
 	}
 	
@@ -82,10 +83,13 @@ class UserServiceImpl @Inject() (cartModel: CartModel,
 		}
 	
 	def findId(email: String): Future[Option[String]] =
-		userModel getUserByEmail(email) map (_ map(_.userId))
+		userModel getUserByEmail(email) map (_ flatMap(_.userId))
 	
 	def getUser(userId: String): Future[UserDto] =
 		userModel getUserById(userId) map(_.getOrElse(throw new Exception()))
+	
+	def getUserOption(userId: String): Future[Option[UserDto]] =
+		userModel getUserById userId
 	
 	private val outOfStockException = (stock: Int) =>
 		Future.failed(new Exception(s"재고가 부족합니다! (남은 수량: ${stock})"))
@@ -128,6 +132,13 @@ class UserServiceImpl @Inject() (cartModel: CartModel,
 //	def getAddress(implicit userId: String): Future[Seq[AddressDto]] =
 //		db.run(UserAddresses.filter(addr => addr.userId === userId).result).map(_.map(AddressDto(_)))
 	
-	def checkUserOrderedThisProduct(userId: String, productId: Int): Future[Option[ProductDto]] =
-		orderModel checkUserOrderedThisProduct(userId, productId)
+	def checkUserOrderedThisProduct(userId: String, productId: Int): Future[_] =
+		orderModel checkUserOrderedThisProduct (userId, productId)
+		
+	def insertReview(review: ReviewDto): Future[Int] =
+		reviewModel insertReview review
+		
+	def getReviews(userId: String): Future[List[ReviewDto]] =
+		reviewModel getReviewsByUserId userId
+	
 }

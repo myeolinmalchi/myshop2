@@ -31,7 +31,7 @@ class NonUserService @Inject() (cartModel: NonUserCartModel,
 			val is = cart.itemList.map(_.productOptionItemId)
 			productModel checkStock(is, q) flatMap {
 				case (stock, false) => outOfStockException(stock)
-				case (_, true) => cartModel updateQuantity q
+				case (_, true) => cartModel updateQuantity (q, cartId)
 			}
 		}
 	}
