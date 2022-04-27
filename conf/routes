@@ -3,71 +3,108 @@
 # ~~~~
 
 # An example controller showing a sample home page
-GET     /                           controllers.HomeController.index
-# An example controller showing how to use dependency injection
-GET     /count                      controllers.CountController.count
-# An example controller showing how to write asynchronous code
-GET     /message                    controllers.AsyncController.message
+GET     /                                                   controllers.user.IndexController.index
 
 # Map static resources from the /public folder to the /assets URL path
-GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
+GET     /assets/*file                                       controllers.Assets.versioned(path="/public", file: Asset)
 
 # Map for UserController(/user)
-POST    /user/login                 controllers.UserController.login
-GET     /user/login                 controllers.UserController.loginPage
+POST    /user/login                                         controllers.user.AccountController.login
+GET     /user/login                                         controllers.user.AccountController.loginPage
 
+GET     /user/logout                                        controllers.user.AccountController.logout
 
-GET     /user/logout                controllers.UserController.logout
+POST    /user/register                                      controllers.user.AccountController.register
+GET    /user/register                                       controllers.user.AccountController.registerPage
 
-POST    /user/register              controllers.UserController.register
-GET    /user/register              controllers.UserController.registerPage
-
-GET     /user/find                  controllers.UserController.findUserPage
-POST    /user/find/id               controllers.UserController.findId
-
-POST    /user/carts                 controllers.UserController.addCart
-GET     /user/carts                 controllers.UserController.cartList
-DELETE  /user/carts                 controllers.UserController.deleteCart
-PUT     /user/carts                 controllers.UserController.updateCartQuantity
+POST    /user/carts                                         controllers.user.CartController.addCart
+GET     /user/carts                                         controllers.user.CartController.cartList
+DELETE  /user/carts                                         controllers.user.CartController.deleteCart
+PUT     /user/carts                                         controllers.user.CartController.updateCartQuantity
 
 #POST    /user/addresses             controllers.UserController.addAddress
 #GET     /user/addresses             controllers.UserController.addressList
 
-POST    /user/order                 controllers.UserController.order
-GET     /user/order                 controllers.UserController.getOrders
+POST    /user/order                                         controllers.user.OrderController.order
+GET     /user/order                                         controllers.user.OrderController.getOrders
+
+POST    /user/product/check  controllers.user.OrderController.checkUserOrderedThisProduct
+
 # Map for SellerController(/seller)
-GET     /seller                       controllers.SellerController.index
+GET     /seller                                             controllers.seller.IndexController.index
 
 # reqeust: userId, userPw => response: boolean
-POST    /seller/login                 controllers.SellerController.login
-GET     /seller/login                 controllers.SellerController.loginPage
+POST    /seller/login                                       controllers.seller.AccountController.login
+GET     /seller/login                                       controllers.seller.AccountController.loginPage
 
-GET     /seller/logout                controllers.SellerController.logout
+GET     /seller/logout                                      controllers.seller.AccountController.logout
 
-POST    /seller/register              controllers.SellerController.register
-GET    /seller/register              controllers.SellerController.registerPage
+POST    /seller/register                                    controllers.seller.AccountController.register
+GET     /seller/register                                    controllers.seller.AccountController.registerPage
 
-GET     /seller/find                  controllers.SellerController.findSellerPage
-POST    /seller/find/id               controllers.SellerController.findId
-
-POST    /seller/product                 controllers.SellerController.addProduct
-GET     /seller/product                 controllers.SellerController.getProducts
-GET     /seller/product/register        controllers.SellerController.productRegisterPage
-POST    /seller/product/register        controllers.SellerController.addProduct
+POST    /seller/product                                     controllers.seller.ProductController.addProduct
+GET     /seller/product                                     controllers.seller.ProductController.getProducts
+GET     /seller/product/register                            controllers.seller.ProductController.productRegisterPage
+POST    /seller/product/register                            controllers.seller.ProductController.addProduct
 
 #GET     /seller/product/detail          controllers.SellerController.productDetail(product: dto.ProductDto)
 
-POST    /seller/product/stock           controllers.SellerController.getAllProductStock
-PUT     /seller/product/stock           controllers.SellerController.updateStock
+POST    /seller/product/stock                               controllers.seller.ProductController.getAllProductStock
+PUT     /seller/product/stock                               controllers.seller.ProductController.updateStock
 
 # Map for search(/search)
-GET     /search/:code/:keyword controllers.SearchController.search(code, keyword, page: Option[Int], size: Option[Int], seq:Option[Int])
-GET     /product/detail/:productId       controllers.SearchController.productDetail(productId: Int)
-POST    /product/detail/stock           controllers.SearchController.getOneProductOption
+GET     /search/:code/:keyword                              controllers.product.SearchController.search(code, keyword, page: Option[Int], size:Option[Int], seq:Option[Int])
+GET     /product/detail/:productId                          controllers.product.SearchController.productDetail(productId: Int)
+POST    /product/detail/stock                               controllers.product.SearchController.getOneProductOption
 
 #Map for Category(/category)
-GET     /category                       controllers.CategoryController.getMainCategories
+GET     /category                                           controllers.product.CategoryController.getMainCategories
 
 # request: categoryCode => response: List[categoryCode, name]
-POST     /category/children             controllers.CategoryController.getChildrens
-POST    /category/siblings                controllers.CategoryController.getSiblings
+POST     /category/children                                 controllers.product.CategoryController.getChildrens
+POST    /category/siblings                                  controllers.product.CategoryController.getSiblings
+
+
+# ---------------------------------------------------------------------------
+#                           Routes For Rest API
+# ---------------------------------------------------------------------------
+
+# User Account
+POST    /api/v1/user/login                                  restcontrollers.user.AccountController.login
+POST    /api/v1/user                                        restcontrollers.user.AccountController.register
+
+# Carts
+GET     /api/v1/user/:userId/cart                           restcontrollers.user.CartController.getCarts(userId)
+POST    /api/v1/user/:userId/cart                           restcontrollers.user.CartController.addCart(userId)
+
+GET     /api/v1/user/:userId/cart/:cartId                   restcontrollers.user.CartController.getCart(userId, cartId: Int)
+PUT     /api/v1/user/:userId/cart/:cartId                   restcontrollers.user.CartController.updateQuantity(userId, cartId: Int)
+DELETE  /api/v1/user/:userId/cart/:cartId                   restcontrollers.user.CartController.deleteCart(userId, cartId: Int)
+
+# Orders
+GET     /api/v1/user/:userId/order                          restcontrollers.user.OrderController.getOrders(userId)
+POST    /api/v1/user/:userId/order                          restcontrollers.user.OrderController.createOrder(userId)
+
+GET     /api/v1/user/:userId/product/:productId             restcontrollers.user.OrderController.checkUserOrdered(userId,productId: Int)
+
+# Product Categories
+GET     /api/v1/category/main                               restcontrollers.product.CategoryController.getMainCategories
+GET     /api/v1/category/:code/sibling                      restcontrollers.product.CategoryController.getSiblings(code)
+GET     /api/v1/category/:code/children                     restcontrollers.product.CategoryController.getChildrens(code)
+
+# Product Search
+GET     /api/v1/product/search/:keyword                     restcontrollers.product.SearchController.search(code: Option[String], keyword, page: Option[Int], size: Option[Int],seq: Option[Int])
+GET     /api/v1/product/:productId                          restcontrollers.product.SearchController.getProduct(productId: Int)
+
+# Seller Account
+POST    /api/v1/seller/login                                restcontrollers.seller.AccountController.login
+POST    /api/v1/seller                                      restcontrollers.seller.AccountController.register
+
+# Seller Product
+POST    /api/v1/seller/:sellerId                            restcontrollers.seller.ProductController.addProduct(sellerId)
+GET     /api/v1/seller/:sellerId                            restcontrollers.seller.ProductController.getProducts(sellerId)
+
+# Seller Product Stock
+GET     /api/v1/seller/:sellerId/product/:productId/stock   restcontrollers.seller.ProductController.getAllProductStock(sellerId, productId: Int)
+PUT     /api/v1/seller/:sellerId/product/:productId/stock   restcontrollers.seller.ProductController.updateStock(sellerId, productId:Int)
+
