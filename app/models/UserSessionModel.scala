@@ -1,10 +1,12 @@
 package models
 
+import dto.UserDto
 import java.time.LocalDateTime
 import java.util.UUID
-import play.api.Logging
 import play.api.Logger
-import play.api.mvc.Session
+import play.api.libs.json.Json
+import play.api.mvc.Results.Ok
+import play.api.mvc.{AnyContent, Request, Result, Session}
 import scala.collection.mutable
 
 case class UserSessionModel(token: String, userId: String, expiration: LocalDateTime)
@@ -24,11 +26,14 @@ object UserSessionModel {
 		sessions-=session
 	}
 	
-	def generateToken(userId: String, session: Session): String = {
-		val token = s"$userId-user-${UUID.randomUUID().toString}"
+	private def generateToken(implicit request: Request[AnyContent], user: UserDto): String = {
+		val token = s"${user.userId.get}-user-${UUID.randomUUID().toString}"
 		val time = LocalDateTime.now().plusHours(9)
 		logger.info(s"[$time] User token has been generated: $token")
-		sessions.put(session, UserSessionModel(token, userId, time))
+		sessions.put(request.session, UserSessionModel(token, user.userId.get, time))
 		token
 	}
+	
+	def newSessionResult(implicit request: Request[AnyContent], user: UserDto): Result =
+		Ok(Json.toJson(true)).withSession("sessionToken" -> generateToken)
 }

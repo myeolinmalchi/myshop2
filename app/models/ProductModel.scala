@@ -82,6 +82,7 @@ class ProductModel @Inject() (val dbConfigProvider: DatabaseConfigProvider)
 		def toDto[T, R](xs: Seq[T])(g: R => DBIOAction[R, NoStream, Effect.All])
 					   (implicit f: T => R): DBIOAction[List[R], NoStream, Effect.All] =
 			DBIO.sequence(xs.map(f andThen g).toList)
+			
 	}
 
 	import InnerApi._
@@ -90,25 +91,33 @@ class ProductModel @Inject() (val dbConfigProvider: DatabaseConfigProvider)
 		db run (for {
 			products <- productQuery(f).result
 			productDtoList <- toDto(products) { p: ProductDto =>
-				for{options <- optionQuery(p.productId).result
+				for {
+					options <- optionQuery(p.productId).result
 					optionDtoList <- toDto(options) { o: ProductOptionDto =>
-						for{items <- itemQuery(o.productOptionId).result
+						for {
+							items <- itemQuery(o.productOptionId).result
 							itemDtoList = items.map(ProductOptionItemDto.newInstance).toList
-						} yield o.setItems(itemDtoList) }
-				} yield p.setOptions(optionDtoList) }
+						} yield o.setItems(itemDtoList)
+					}
+				} yield p.setOptions(optionDtoList)
+			}
 		} yield productDtoList)
-		
+	
 	def getProductsSortBy(page: Int, n: Int, h: Products => slick.lifted.ColumnOrdered[_])
 						 (implicit f: Products => Rep[Boolean]): Future[List[ProductDto]] =
 		db run (for {
 			products <- productQuery(f).sortBy(h).drop((page-1)*n).take(n).result
 			productDtoList <- toDto(products) { p: ProductDto =>
-				for{options <- optionQuery(p.productId).result
+				for {
+					options <- optionQuery(p.productId).result
 					optionDtoList <- toDto(options) { o: ProductOptionDto =>
-						for{items <- itemQuery(o.productOptionId).result
+						for {
+							items <- itemQuery(o.productOptionId).result
 							itemDtoList = items.map(ProductOptionItemDto.newInstance).toList
-						} yield o.setItems(itemDtoList) }
-				} yield p.setOptions(optionDtoList) }
+						} yield o.setItems(itemDtoList)
+					}
+				} yield p.setOptions(optionDtoList)
+			}
 		} yield productDtoList)
 	
 	def getProductsCount(implicit f: Products => Rep[Boolean]): Future[Int] =
@@ -117,6 +126,9 @@ class ProductModel @Inject() (val dbConfigProvider: DatabaseConfigProvider)
 	def getProductOptionsCount(productId: Int): Future[Int] =
 		db run ProductOptions.filter(o => o.productId === productId)
 				.map(_.productOptionId).result map(_.toList.size)
+				
+	def getSellerByProductId(productId: Int): Future[Option[String]] =
+		db run Products.filter(_.productId === productId).map(_.sellerId).result.headOption
 		
 	def getProductByIdQuery(productId: Int): DBIOAction[ProductDto, NoStream, Effect.All] =
 		for {
@@ -125,9 +137,10 @@ class ProductModel @Inject() (val dbConfigProvider: DatabaseConfigProvider)
 			images <- imageQuery(productId).result
 			productDto = ProductDto.newInstance(product.getOrElse(throw new Exception()))
 			optionDtoList <- toDto(options) { o: ProductOptionDto =>
-				for{items <- itemQuery(o.productOptionId).result
-					itemDtoList <- toDto(items) { i: ProductOptionItemDto =>  DBIO.successful(i) }
-					} yield o.setItems(itemDtoList) }
+				for {
+					items <- itemQuery(o.productOptionId).result
+					itemDtoList <- toDto(items) { i: ProductOptionItemDto =>  DBIO.successful(i)}
+				} yield o.setItems(itemDtoList) }
 			imageDtoList <- toDto(images) { i: ProductImageDto => DBIO.successful(i) }
 		} yield productDto
 				.setOptions(optionDtoList)
@@ -171,7 +184,8 @@ class ProductModel @Inject() (val dbConfigProvider: DatabaseConfigProvider)
 	
 	def getStockId(is: List[Int]): Future[Int] =
 		db run getStockIdQuery(is)
-	
+		
+//	남은 재고가 있는지 검사하는 쿼리
 	def checkStockQuery(is: List[Int], quantity: Int): DBIOAction[(Int, Boolean),NoStream, Effect.All] =  {
 		def go(is: List[Int], parentId: Int, s: Int): DBIOAction[(Int, Boolean),NoStream,Effect.All] = is match {
 			case h::t =>
@@ -230,6 +244,9 @@ class ProductModel @Inject() (val dbConfigProvider: DatabaseConfigProvider)
 	
 	def updateStock(stockId: Int, adds: Int): Future[Int] =
 		db run updateStockQuery(stockId, adds)
+		
+	def getStockProductId(stockId: Int): Future[Option[Int]] =
+		db run ProductStock.filter(_.productStockId === stockId).map(_.productId).result.headOption
 	
 }
 

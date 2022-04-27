@@ -12,13 +12,16 @@ import slick.jdbc.MySQLProfile.api._
 
 @Singleton
 class SellerModel @Inject() (val dbConfigProvider: DatabaseConfigProvider)
-				 (implicit ec: ExecutionContext)
+							(implicit ec: ExecutionContext)
 	extends HasDatabaseConfigProvider[JdbcProfile] {
 	
 	def getSellerById(sellerId: String): Future[Option[SellerDto]] =
 		db run (for {
 			sellerRowOption <- Sellers.filter(_.sellerId === sellerId).result.headOption
 		} yield sellerRowOption.map(SellerDto.newEntity))
+		
+	def getSellerPassword(sellerId: String): Future[Option[String]] =
+		db run Sellers.filter(_.sellerId === sellerId).map(_.sellerPw).result.headOption
 	
 	def getSellerByEmail(email: String): Future[Option[SellerDto]] =
 		db run (for {

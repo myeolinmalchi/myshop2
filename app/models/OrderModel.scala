@@ -1,8 +1,6 @@
 package models
 
-import cats.implicits.toTraverseOps
 import dto._
-import java.sql.Timestamp
 import javax.inject._
 import models.Tables._
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
@@ -64,21 +62,15 @@ class OrderModel @Inject() (val dbConfigProvider: DatabaseConfigProvider,
 			orders <- orderQuery(userId).result
 			orderDtoList <- ordersToDto(orders)
 		} yield orderDtoList)
-		
-	def checkUserOrderedThisProduct(userId: String, productId: Int): Future[Option[ProductDto]] =
-		db run (for {
-			products <- (for {
-				order <- orderQuery(userId)
-				product <- OrderProducts
-				if order.orderId == product.orderId
-			} yield product.productId).result
-			productIdOption = products.find(_ == productId)
-		} yield productIdOption match {
-			case Some(productId) =>
-				val query = productModel getProductByIdQuery productId
-				query.map(Some(_))
-			case None => DBIO.successful(None)
-		}).flatten
+	
+	def checkUserOrderedThisProduct(userId: String, productId: Int): Future[_] =
+		db run(for {
+			orders <- orderQuery(userId).result
+			products <- DBIO.sequence(orders.map { order =>
+				OrderProducts.filter(_.orderId === order.orderId).result
+			}).map(_.flatten)
+			productOption = products.find(_.productId == productId)
+		} yield productOption.getOrElse(throw new Exception("구매내역이 없습니다.")))
 		
 	def getOrderProductsBySellerId(sellerId: String): Future[List[OrderProductDto]] =
 		db run (for {

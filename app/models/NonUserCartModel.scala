@@ -118,9 +118,9 @@ class NonUserCartModel @Inject() (val dbConfigProvider: DatabaseConfigProvider,
 		db run query
 	}
 	
-	def updateQuantity(q: Int)(implicit cartId: Int): Future[Int] = q match {
+	def updateQuantity(q: Int, cartId: Int): Future[Int] = q match {
 		case quantity if quantity > 0 =>
-			db run cartIdQuery.map(_.quantity).update(quantity)
+			db run cartIdQuery(cartId).map(_.quantity).update(quantity)
 		case _ => Future.failed(new Exception("수량은 0보다 큰 값이어야 합니다."))
 	}
 	

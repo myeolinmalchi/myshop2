@@ -22,7 +22,7 @@ class CartModel @Inject() (val dbConfigProvider: DatabaseConfigProvider,
 	
 	type D[T] = DBIOAction[T, NoStream, Effect.All]
 	
-	private def getItemsQuery(cart: CartDto): DBIOAction[CartDto, NoStream, Effect.Read] =
+	private def getItemsQuery(cart: CartDto): DBIOAction[CartDto,NoStream,Effect.All] =
 		for {
 			details <- CartDetails.filter(_.cartId === cart.cartId).result
 			items <- DBIO.sequence(details.map { detail =>
@@ -40,9 +40,8 @@ class CartModel @Inject() (val dbConfigProvider: DatabaseConfigProvider,
 	def getCartsByUserId(implicit userId: String): Future[List[CartDto]] =
 		db run (for {
 			carts <- Carts.filter(_.userId === userId).result
-			cartDtoList = carts.map(CartDto.newInstance).toList
+			cartDtoList <- DBIO.sequence(carts.map(CartDto.newInstance).map(getItemsQuery).toList)
 		} yield cartDtoList)
-	
 		
 	def getCartByCartId(implicit cartId: Int): Future[CartDto] =
 		db run getCartByCartIdQuery

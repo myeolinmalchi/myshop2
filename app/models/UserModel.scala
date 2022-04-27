@@ -1,6 +1,7 @@
 package models
 
 import common.encryption.SHA256
+import dto.UserDto.RowToDto
 import dto.{SellerDto, UserDto}
 import javax.inject.{Inject, Singleton}
 import models.Tables.{Sellers, Users}
@@ -16,9 +17,7 @@ class UserModel @Inject() (val dbConfigProvider: DatabaseConfigProvider)
 	extends HasDatabaseConfigProvider[JdbcProfile] {
 	
 	def getUserById(userId: String): Future[Option[UserDto]] =
-		db run (for {
-			userRowOption <- Users.filter(_.userId === userId).result.headOption
-		} yield userRowOption.map(UserDto.newEntity))
+		db run Users.filter(_.userId === userId).result.headOption map(_.map(_.toDto))
 	
 	def getUserPassword(userId: String): Future[Option[String]] =
 		db run Users.filter(_.userId === userId).map(_.userPw).result.headOption
@@ -30,12 +29,8 @@ class UserModel @Inject() (val dbConfigProvider: DatabaseConfigProvider)
 		db run Users.filter(_.email === email).map(_.email).result.headOption
 	
 	def getUserByEmail(email: String): Future[Option[UserDto]] =
-		db run (for {
-			userRowOption <- Users.filter(_.email === email).result.headOption
-		} yield userRowOption.map(UserDto.newEntity))
+		db run Users.filter(_.email === email).result.headOption map(_.map(_.toDto))
 		
 	def insertUser(user: UserDto): Future[Int] =
-		db.run(Users.map(u => (u.userId, u.userPw, u.name, u.email, u.phonenumber))
-				+= (user.userId, SHA256.encrypt(user.userPw), user.name, user.email, user.phonenumber))
-	
+		db.run(Users += user.toRow)
 }
