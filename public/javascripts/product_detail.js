@@ -1,8 +1,9 @@
 const optionCount = Number(document.getElementById("option-count").value)
 const userId = document.getElementById("user_id").value
+const productId = Number(location.pathname.split("/")[3])
 
 const token = document.cookie.split('=')[1]
-const uuid = document.cookie.split('=')[1].split('-')[2]
+const uuid = (token === undefined ? '' : token.split('=')[2])
 
 const price = Number(document.querySelector('input[name="price"]').value)
 const totalPriceBox = document.querySelector('#totPrice')
@@ -12,6 +13,27 @@ const itemInputs = document.querySelectorAll('input[name^="option"]')
 const quantityInput = document.getElementById("quantity")
 const addQuantityButton = document.getElementById("add-quantity")
 const subQuantityButton = document.getElementById("sub-quantity")
+const reviewWriteButton = document.getElementById("review-write-button")
+
+reviewWriteButton.addEventListener('click', (e) => {
+    fetch('/user/product/check', {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Data-Type": "json"
+        },
+        body: JSON.stringify({
+            productId: productId
+        })
+    }).then(response => response.json())
+        .then(json => {
+            if(json === true) {
+                location.href = "/"
+            } else {
+                alert(json.error)
+            }
+        })
+})
 
 const addCartButton = document.getElementById("add-cart-button")
 

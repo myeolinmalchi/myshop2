@@ -13,10 +13,7 @@ const login = () => {
         },
         body: JSON.stringify({
             userId: idBox.value,
-            userPw: pwBox.value,
-            name: "",
-            email: "",
-            phonenumber: ""
+            userPw: pwBox.value
         })
     }).then(response => response.json())
         .then(json => {

@@ -27,7 +27,7 @@ function cartList(){
         method: 'GET',
         headers: {
             'Content-Type':'application/json'
-        },
+        }
     };
     fetch('/user/carts', init)
         .then(response => response.json())
