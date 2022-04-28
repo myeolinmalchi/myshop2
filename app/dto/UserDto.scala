@@ -1,14 +1,18 @@
 package dto
 
+import common.encryption.SHA256
+import java.sql.Timestamp
+import models.Tables
 import models.Tables._
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, Reads, Writes}
 import scala.collection.mutable.Map
+import scala.language.implicitConversions
 
-case class UserDto(userId: String,
-				   userPw: String,
-				   name: String,
-				   email: String,
-				   phonenumber: String)
+case class UserDto(userId: Option[String] = None,
+				   userPw: Option[String] = None,
+				   name: Option[String] = None,
+				   email: Option[String] = None,
+				   phonenumber: Option[String] = None)
 
 case class AddressDto(userId: String,
 					  addressId: Int,
@@ -18,9 +22,6 @@ case class AddressDto(userId: String,
 					  zipcode: Int)
 
 object UserDto{
-	
-	implicit val userWrites = Json.writes[UserDto]
-	implicit val userReads = Json.reads[UserDto]
 	
 	val USER_ID = "userId"
 	val USER_PW = "userPw"
@@ -49,20 +50,36 @@ object UserDto{
 		EMAIL -> new IllegalArgumentException("이미 존재하는 이메일입니다.")
 	)
 	
-	def newEntity(user: Users#TableElementType) =
-		new UserDto(user.userId, user.userPw, user.name, user.email, user.phonenumber)
-		
-	def apply(userId: String,
-			  userPw: String,
-			  name: String,
-			  email: String,
-			  phonenumber: String) =
-		new UserDto(userId, userPw, name, email, phonenumber)
-		
-	def empty = new UserDto("", "", "", "", "")
+	def empty: UserDto = UserDto()
+	
+	implicit class DtoToRow(dto: UserDto) {
+		def toRow: UsersRow =
+			UsersRow(
+				userId = dto.userId.getOrElse(""),
+				userPw = SHA256.encrypt(dto.userPw.getOrElse("")),
+				name = dto.name.getOrElse(""),
+				email = dto.email.getOrElse(""),
+				phonenumber = dto.phonenumber.getOrElse(""),
+				regdate = None
+			)
+	}
+	
+	implicit class RowToDto(row: UsersRow) {
+		def toDto: UserDto =
+			UserDto (
+				userId = Some(row.userId),
+				userPw = Some(row.userPw),
+				name = Some(row.name),
+				email = Some(row.email),
+				phonenumber = Some(row.phonenumber)
+			)
+	}
+	
+	implicit def writes: Writes[UserDto] = Json.writes[UserDto]
+
+	implicit def reads: Reads[UserDto] = Json.reads[UserDto]
 }
 
 object AddressDto{
-	def apply(addr: UserAddresses#TableElementType) =
-		new AddressDto(addr.userId, addr.addressId, addr.priority, addr.address, addr.addressDetail, addr.zipcode)
+
 }
