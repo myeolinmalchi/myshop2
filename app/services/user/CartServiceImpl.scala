@@ -23,30 +23,7 @@ class CartServiceImpl @Inject() (cartModel: CartModel,
 		}
 	}
 	
-	override def updateQuantity(q: Int)(implicit cartId: Int): Future[Int] =
-		cartModel getItemIdsByCartId cartId flatMap { ids =>
-			productModel checkStock(ids, q) flatMap {
-				case (stock, false) => outOfStockException(stock)
-				case (_, true) => cartModel updateQuantity q
-			}
-		}
-	
-	override def addQuantity(implicit cart: CartDto): Future[Int] =
-		cartModel addQuantity cart.cartId
-	
-	override def subQuantity(implicit cart: CartDto): Future[Int] =
-		cartModel subQuantity cart.cartId
-	
-	override def getCarts(implicit user: UserDto): Future[List[CartDto]] =
-		cartModel getCartsByUserId user.userId.get
-	
-	override def getCart(implicit cart: CartDto): Future[CartDto] =
-		cartModel getCartByCartId cart.cartId
-	
-	override def deleteCart(implicit cart: CartDto): Future[Int] =
-		cartModel deleteCart cart.cartId
-	
-	override def updateQuantity2(cartId: Int, quantity: Int): Future[Int] = {
+	override def updateQuantity(cartId: Int, quantity: Int): Future[Int] = {
 		implicit val id: Int = cartId
 		cartModel getItemIdsByCartId cartId flatMap { ids =>
 			productModel checkStock(ids, quantity) flatMap {
