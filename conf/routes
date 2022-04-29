@@ -73,6 +73,9 @@ POST    /category/siblings                                  controllers.product.
 POST    /api/v1/user/login                                  restcontrollers.user.AccountController.login
 POST    /api/v1/user                                        restcontrollers.user.AccountController.register
 
+POST    /api/v1/user/login/kakao                            restcontrollers.user.AccountController.kakaoLogin
+POST    /api/v1/user/kakao                                  restcontrollers.user.AccountController.kakaoRegister
+
 # Carts
 GET     /api/v1/user/:userId/cart                           restcontrollers.user.CartController.getCarts(userId)
 POST    /api/v1/user/:userId/cart                           restcontrollers.user.CartController.addCart(userId)
