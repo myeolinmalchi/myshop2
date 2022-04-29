@@ -1,0 +1,27 @@
+### 로그인
+POST http://localhost:9000/api/v1/user/login
+Content-Type: application/json
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE2NTA4MjU4NzAsImlhdCI6MTY1MDczOTQ3MCwNCiAJImlkIjogImtrazMzMTEiLA0KCSJyb2xlIjogInVzZXIiDQogfQ.g5or4fAMxI8BsA7g1GiEDS_jdPmZgtDr2z02P0l0JYA
+
+{
+  "userId": "kkk3311",
+  "userPw": "asd3254820"
+}
+
+### 회원가입
+POST http://localhost:9000/api/v1/user
+Content-Type: application/json
+
+{
+  "userId": "",
+  "userPw": "",
+  "name": "",
+  "email": "",
+  "phonenumber": ""
+}
+
+### 회원 정보 수정
+
+
+### 회원 정보 삭제
+

@@ -1,7 +1,7 @@
 package restcontrollers.user
 
 import controllers.Common.{CustomException, CustomFuture}
-import restcontrollers.user.Common._
+import services.user.AuthService._
 import restcontrollers.Common._
 import dto.CartDto
 import javax.inject.{Inject, Singleton}
@@ -10,17 +10,19 @@ import play.api.mvc._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import services.user._
-import services.{NonUserService, UserService}
+import services.{NonUserService}
 
 @Singleton
 class CartController @Inject()(cc: ControllerComponents)
 							  (implicit ec: ExecutionContext,
-							   userService: UserService,
 							   accountService: AccountService,
 							   cartService: CartService,
 							   orderService: OrderService,
+							   authService: AuthService,
 							   nonUserService: NonUserService)
 		extends AbstractController(cc) {
+	
+	import authService.withUserAuth
 	
 	private def checkOwnCart(userId: String, cartId: Int)
 							(result: => Future[Result]): Future[Result] =
@@ -30,7 +32,7 @@ class CartController @Inject()(cc: ControllerComponents)
 		}
 	
 	def getCart(userId: String, cartId: Int): Action[AnyContent] = Action.async { implicit request =>
-		UserAuth(userId).auth { _ =>
+		withUserAuth(userId) { _ =>
 			checkOwnCart(userId, cartId) {
 				cartService.getCart(cartId) getOrError
 			}
@@ -38,13 +40,13 @@ class CartController @Inject()(cc: ControllerComponents)
 	}
 	
 	def getCarts(userId: String): Action[AnyContent] = Action.async { implicit request =>
-		UserAuth(userId).auth { implicit user =>
-			cartService.getCarts getOrError
+		withUserAuth(userId) { implicit user =>
+			cartService.getCarts(userId) getOrError
 		}
 	}
 	
 	def addCart(userId: String): Action[AnyContent] = Action.async { implicit request =>
-		UserAuth(userId).auth { _ =>
+		withUserAuth(userId) { _ =>
 			withJson[CartDto] { implicit cart =>
 				cartService.addCart trueOrError
 			}
@@ -52,7 +54,7 @@ class CartController @Inject()(cc: ControllerComponents)
 	}
 	
 	def deleteCart(userId: String, cartId: Int): Action[AnyContent] = Action.async { implicit request =>
-		UserAuth(userId).auth { _ =>
+		withUserAuth(userId) { _ =>
 			checkOwnCart(userId, cartId) {
 				cartService.deleteCart(cartId) trueOrError
 			}
@@ -60,11 +62,11 @@ class CartController @Inject()(cc: ControllerComponents)
 	}
 	
 	def updateQuantity(userId: String, cartId: Int): Action[AnyContent] = Action.async { implicit request =>
-		UserAuth(userId).auth { _ =>
+		withUserAuth(userId) { _ =>
 			checkOwnCart(userId, cartId) {
 				withAnyJson { value =>
 					val quantity = (value \ "quantity").as[Int]
-					cartService.updateQuantity2(cartId, quantity) trueOrError
+					cartService.updateQuantity(cartId, quantity) trueOrError
 				}
 			}
 		}
