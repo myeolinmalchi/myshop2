@@ -45,24 +45,25 @@ object UserDto{
 		PHONE -> new IllegalArgumentException("유효하지 않은 전화번호입니다."),
 	)
 	
+	val NONE_MATCH_MSG: Map[String, String] = Map (
+		USER_ID -> "유효하지 않은 아이디입니다.",
+		USER_PW -> "유효하지 않은 비밀번호입니다.",
+		NAME -> "유효하지 않은 이름입니다.",
+		EMAIL -> "유효하지 않은 이메일입니다.",
+		PHONE -> "유효하지 않은 전화번호입니다.",
+	)
+	
 	val OVERLAP_EXCEPTION: Map[String, Exception] = Map (
 		USER_ID -> new IllegalArgumentException("이미 존재하는 계정입니다."),
 		EMAIL -> new IllegalArgumentException("이미 존재하는 이메일입니다.")
 	)
 	
-	def empty: UserDto = UserDto()
+	val OVERLAP_MSG: Map[String, String] = Map (
+		USER_ID -> "이미 존재하는 계정입니다.",
+		EMAIL -> "이미 존재하는 이메일입니다."
+	)
 	
-	implicit class DtoToRow(dto: UserDto) {
-		def toRow: UsersRow =
-			UsersRow(
-				userId = dto.userId.getOrElse(""),
-				userPw = SHA256.encrypt(dto.userPw.getOrElse("")),
-				name = dto.name.getOrElse(""),
-				email = dto.email.getOrElse(""),
-				phonenumber = dto.phonenumber.getOrElse(""),
-				regdate = None
-			)
-	}
+	def empty: UserDto = UserDto()
 	
 	implicit class RowToDto(row: UsersRow) {
 		def toDto: UserDto =

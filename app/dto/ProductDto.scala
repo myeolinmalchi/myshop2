@@ -92,7 +92,6 @@ object ProductOptionDto{
 	implicit val optionWrites = Json.writes[ProductOptionDto]
 	implicit val newInstance: ProductOptions#TableElementType => ProductOptionDto =
 		o => new ProductOptionDto(o.productId, o.productOptionId, o.name, o.optionSequence, Nil)
-	
 }
 object ProductImageDto {
 	implicit val imageRead = Json.reads[ProductImageDto]

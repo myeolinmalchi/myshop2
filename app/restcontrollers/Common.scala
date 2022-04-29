@@ -1,15 +1,11 @@
 package restcontrollers
 
-import dto.UserDto
 import java.util.concurrent.TimeUnit
 import pdi.jwt.{JwtAlgorithm, JwtClaim, JwtJson}
-import play.api.libs.json.{JsError, JsSuccess, JsValue, Json, Reads}
-import play.api.mvc.Results.{BadRequest, Ok, Unauthorized}
+import play.api.libs.json._
+import play.api.mvc.Results.BadRequest
 import play.api.mvc.{AnyContent, Request, Result}
-import restcontrollers.user.Common.{AuthResult, AuthSuccess, IncorrectAuth, IncorrectID, InvalidToken, NoToken, NotExistID}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Success
-import services.user.AccountService
 
 object Common {
 	

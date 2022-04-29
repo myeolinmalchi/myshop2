@@ -9,12 +9,11 @@ import play.api.mvc._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import services.user._
-import services.{NonUserService, UserService}
+import services.{NonUserService}
 
 @Singleton
 class CartController @Inject()(cc: ControllerComponents)
 							  (implicit ec: ExecutionContext,
-							   userService: UserService,
 							   accountService: AccountService,
 							   cartService: CartService,
 							   orderService: OrderService,
@@ -32,7 +31,7 @@ class CartController @Inject()(cc: ControllerComponents)
 	
 	def cartList: Action[AnyContent] = Action.async { implicit request =>
 		withUser { implicit user =>
-			cartService.getCarts cartOrError
+			cartService.getCarts(user.userId.get) cartOrError
 		} ifNot withNonUserToken { token =>
 			nonUserService.getCarts(token) cartOrError
 		}
@@ -52,19 +51,9 @@ class CartController @Inject()(cc: ControllerComponents)
 		withAnyJson { value =>
 			val cartId = (value \ "cartId").as[Int]
 			withUser { _ =>
-				userService.deleteCart(cartId) trueOrError
+				cartService.deleteCart(cartId) trueOrError
 			} ifNot withNonUserToken { _ =>
 				nonUserService.deleteCart(cartId) trueOrError
-			}
-		}
-	}
-	
-	def deleteCartTest(): Action[AnyContent] = Action.async { implicit request =>
-		withJsonDto[CartDto] { implicit cart =>
-			withUser { _ =>
-				cartService.deleteCart trueOrError
-			} ifNot withNonUserToken { _ =>
-				nonUserService.deleteCart(cart.cartId) trueOrError
 			}
 		}
 	}
@@ -74,7 +63,7 @@ class CartController @Inject()(cc: ControllerComponents)
 			val quantity = (value \ "quantity").as[Int]
 			val cartId = (value \ "cartId").as[Int]
 			withUser { _ =>
-				userService.updateQuantity(quantity)(cartId) trueOrError
+				cartService.updateQuantity(cartId, quantity) trueOrError
 			} ifNot withNonUserToken { _ =>
 				nonUserService.updateQuantity(quantity)(cartId) trueOrError
 			}

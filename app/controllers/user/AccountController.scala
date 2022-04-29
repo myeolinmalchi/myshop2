@@ -1,11 +1,13 @@
 package controllers.user
 
+import cats.data.OptionT
 import common.json.CustomJsonApi._
 import controllers.Common._
 import controllers.user.CommonApi._
 import dto.UserDto
 import javax.inject.{Inject, Singleton}
 import models.UserSessionModel
+import play.api.libs.json.Json
 import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
@@ -14,7 +16,7 @@ import services.user._
 @Singleton
 class AccountController @Inject()(cc: ControllerComponents)
 								 (implicit ec: ExecutionContext,
-								  userService: AccountService)
+								  accountService: AccountService)
 		extends AbstractController(cc){
 	
 	def loginPage: Action[AnyContent]= Action.async { implicit request =>
@@ -24,9 +26,14 @@ class AccountController @Inject()(cc: ControllerComponents)
 	def login: Action[AnyContent]= Action.async { implicit request =>
 		withoutUser {
 			withJsonDto[UserDto] { implicit user =>
-				userService.login map ( _ => UserSessionModel.newSessionResult ) recover {
-					case ex: Exception => ex toJsonError
-				}
+				(for {
+					isCorrect <- accountService.login
+					userId <- OptionT.fromOption[Future](user.userId)
+				} yield if(isCorrect) {
+					UserSessionModel.newSessionResult
+				} else {
+					BadRequest(Json.toJson(Map("error" -> "비밀번호가 일치하지 않습니다.")))
+				}).getOrElse(BadRequest(Json.toJson(Map("error" -> "존재하지 않는 계정입니다."))))
 			}
 		}
 	}
@@ -40,7 +47,7 @@ class AccountController @Inject()(cc: ControllerComponents)
 	def register: Action[AnyContent]= Action async { implicit request =>
 		withoutUser {
 			withJsonDto[UserDto] { implicit user =>
-				userService.register trueOrError
+				accountService.register trueOrError
 			}
 		}
 	}

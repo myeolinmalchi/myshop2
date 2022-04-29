@@ -72,6 +72,15 @@ class OrderModel @Inject() (val dbConfigProvider: DatabaseConfigProvider,
 			productOption = products.find(_.productId == productId)
 		} yield productOption.getOrElse(throw new Exception("구매내역이 없습니다.")))
 		
+	def getRecentOrderedProduct(userId: String, productId: Int): Future[Option[OrderProductDto]] =
+		db run(for {
+			orders <- orderQuery(userId).result
+			products <- DBIO.sequence(orders.map { order =>
+				OrderProducts.filter(_.orderId === order.orderId).result
+			}).map(_.flatten)
+			productOption = products.find(_.productId == productId)
+		} yield productOption.map(OrderProductDto.newInstance))
+	
 	def getOrderProductsBySellerId(sellerId: String): Future[List[OrderProductDto]] =
 		db run (for {
 			products <- orderProductBySellerQuery(sellerId).result

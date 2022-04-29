@@ -12,6 +12,7 @@ case class CartDto(userId: String,
 				   quantity: Int,
 				   addedDate: Date,
 				   var itemList: List[ProductOptionItemDto]=Nil) {
+	
 	def setList(itemList: List[ProductOptionItemDto]): CartDto = {
 		this.itemList = itemList
 		this
@@ -23,7 +24,7 @@ case class CartDto(userId: String,
 	}
 }
 
-object CartDto{
+object CartDto {
 	
 	implicit val itemWrites = Json.writes[ProductOptionItemDto]
 	implicit val itemReads = Json.reads[ProductOptionItemDto]
