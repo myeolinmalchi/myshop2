@@ -4,7 +4,7 @@ import cats.data.OptionT
 import common.json.CustomJsonApi._
 import controllers.Common._
 import controllers.user.CommonApi._
-import dto.UserDto
+import dto.UserRequestDto
 import javax.inject.{Inject, Singleton}
 import models.UserSessionModel
 import play.api.libs.json.Json
@@ -25,7 +25,7 @@ class AccountController @Inject()(cc: ControllerComponents)
 	
 	def login: Action[AnyContent]= Action.async { implicit request =>
 		withoutUser {
-			withJsonDto[UserDto] { implicit user =>
+			withJsonDto[UserRequestDto] { implicit user =>
 				(for {
 					isCorrect <- accountService.login
 					userId <- OptionT.fromOption[Future](user.userId)
@@ -46,8 +46,8 @@ class AccountController @Inject()(cc: ControllerComponents)
 	
 	def register: Action[AnyContent]= Action async { implicit request =>
 		withoutUser {
-			withJsonDto[UserDto] { implicit user =>
-				accountService.register trueOrError
+			withJsonDto[UserRequestDto] { implicit user =>
+				accountService.regist trueOrError
 			}
 		}
 	}

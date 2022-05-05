@@ -2,8 +2,8 @@ package services.user
 
 import cats.data.{EitherT, OptionT}
 import common.validation.ValidationResultLib
-import dto.UserDto
-import dto.UserDto.{EMAIL, NAME, NONE_MATCH_MSG, OVERLAP_MSG, PATTERNS, PHONE, USER_ID, USER_PW}
+import dto.{UserDto, UserRequestDto}
+import dto.UserRequestDto.{EMAIL, NAME, NONE_MATCH_MSG, OVERLAP_MSG, PATTERNS, PHONE, USER_ID, USER_PW}
 import javax.inject.{Inject, Singleton}
 import models.UserModel
 import play.api.libs.ws.WSClient
@@ -15,7 +15,7 @@ import services.user.Common._
 class AccountServiceImpl @Inject() ()(implicit ws: WSClient, ec: ExecutionContext, userModel: UserModel)
 		extends AccountService with ValidationResultLib[Future]{
 	
-	implicit class UserValidator(user: UserDto) {
+	implicit class UserValidator(user: UserRequestDto) {
 		private def checkPattern(str: String, key: String): ValidationResult[ValidationFailure, Unit] =
 			ValidationResult.ensure(
 				str.matches(PATTERNS(key)),
@@ -48,56 +48,60 @@ class AccountServiceImpl @Inject() ()(implicit ws: WSClient, ec: ExecutionContex
 		
 		private def validPhone(phone: String): ValidationResult[ValidationFailure, Unit] =
 			checkPattern(phone, PHONE)
-		
-		def accountValidation: Option[ValidationResult[ValidationFailure, Unit]] =
-			 for {
-				 userId <- user.userId
-				 userPw <- user.userPw
-				 name <- user.name
-				 email <- user.email
-				 phone <- user.phonenumber
-			 } yield for {
-				 _ <- validUserId(userId)
-				 _ <- validUserPw(userPw)
-				 _ <- validName(name)
-				 _ <- validEmail(email)
-				 _ <- validPhone(phone)
-			 } yield ()
-	
-		def kakaoAccountValidation: Option[ValidationResult[ValidationFailure, Unit]] =
+			
+		def accountValidation: Option[ValidationResult[ValidationFailure, UserDto]] =
 			for {
+				userId <- user.userId
+				userPw <- user.userPw
 				name <- user.name
+				email <- user.email
+				phone <- user.phonenumber
+			} yield for {
+				_ <- validUserId(userId)
+				_ <- validUserPw(userPw)
+				_ <- validName(name)
+				_ <- validEmail(email)
+				_ <- validPhone(phone)
+			} yield UserDto(userId, userPw, name, email, phone)
+		
+		def kakaoAccountValidation: Option[ValidationResult[ValidationFailure, UserDto]] =
+			for {
+				userId <- user.userId
+				userPw <- user.userPw
+				name <- user.name
+				email <- user.email
 				phone <- user.phonenumber
 			} yield for {
 				_ <- validName(name)
 				_ <- validPhone(phone)
-			} yield ()
-		
+			} yield UserDto(userId, userPw, name, email, phone)
 	}
 	
-	override def login(implicit user: UserDto): OptionT[Future, Boolean] =
+	override def login(implicit user: UserRequestDto): OptionT[Future, Boolean] =
 		for {
 			enteredPw <- OptionT.fromOption[Future](user.userPw)
 			userId <- OptionT.fromOption[Future](user.userId)
 			correctPw <- userModel getUserPassword userId
 		} yield enteredPw.equals(correctPw)
 	
-	private def commonRegister(f: UserDto => Option[ValidationResult[ValidationFailure, Unit]])
-							  (implicit user: UserDto): Future[Either[ValidationFailure, Unit]] =
+	private def commonRegist(f: UserRequestDto => Option[ValidationResult[ValidationFailure, UserDto]])
+							(implicit user: UserRequestDto): Future[Either[ValidationFailure, Unit]] =
 		(for {
 			validationResult <- OptionT.fromOption[Future](f(user))
-			affResult <- OptionT.liftF (validationResult onSuccess userModel.insertUser(user))
+			affResult <- OptionT.liftF (
+				validationResult.onSuccess { user => userModel insertUser user }
+			)
 		} yield affResult) map {
 			case Right(aff) if aff == 1 => Right()
 			case Right(_) => Left(ValidationFailure("회원가입에 실패했습니다."))
 			case Left(failure) => Left(failure)
 		} getOrElse(throw new NoSuchElementException)
 	
-	override def register(implicit user: UserDto): Future[Either[ValidationFailure, Unit]] =
-		commonRegister(_.accountValidation)
+	override def regist(implicit user: UserRequestDto): Future[Either[ValidationFailure, Unit]] =
+		commonRegist(_.accountValidation)
 		
-	override def kakaoRegister(implicit user: UserDto): Future[Either[ValidationFailure, Unit]] =
-		commonRegister(_.kakaoAccountValidation)
+	override def kakaoRegist(implicit user: UserRequestDto): Future[Either[ValidationFailure, Unit]] =
+		commonRegist(_.kakaoAccountValidation)
 		
 	// TODO: Access Token이 유효하지 않을 경우
 	override def getUserInfoByKakaoAccessToken(accessToken: String): Future[(String, String)] = {
@@ -112,16 +116,10 @@ class AccountServiceImpl @Inject() ()(implicit ws: WSClient, ec: ExecutionContex
 				}
 	}
 	
-	override def findId(email: String): Future[Option[String]] =
-		userModel.getUserByEmail(email).map(_.flatMap(_.userId))
-	
-	override def getUser(userId: String): Future[UserDto] =
-		userModel getUserById userId getOrElse(throw new Exception)
-	
-	override def getUserOption(userId: String): OptionT[Future, UserDto] =
+	override def getUser(userId: String): OptionT[Future, UserDto] =
 		userModel getUserById userId
 	
-	override def getUserOptionByEmail(email: String): Future[Option[UserDto]] =
+	override def getUserByEmail(email: String): OptionT[Future, UserDto] =
 		userModel getUserByEmail email
 	
 	override def userIdExist(userId: String): Future[Boolean] =
