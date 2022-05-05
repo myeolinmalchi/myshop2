@@ -1,6 +1,6 @@
 package restcontrollers.seller
 
-import dto.{SellerDto, UserDto}
+import dto.{SellerDto, UserRequestDto}
 import pdi.jwt.{JwtClaim, JwtJson}
 import play.api.libs.json.Json
 import play.api.mvc.{AnyContent, Request, Result}

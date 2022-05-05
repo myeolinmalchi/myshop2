@@ -1,6 +1,6 @@
 package controllers.user
 
-import dto.UserDto
+import dto.{UserDto, UserRequestDto}
 import java.time.LocalDateTime
 import models.{NonUserModel, UserSessionModel}
 import play.api.mvc.Results.Redirect
@@ -24,7 +24,7 @@ object CommonApi {
 					.flatMap(token => UserSessionModel.getSession(token))
 					.filter(_.expiration.isAfter(LocalDateTime.now()))
 					.map(_.userId)
-					.map(service.getUser))
+					.map(service.getUser(_).value.map(_.get)))
 		}
 		
 		def ifNot(result: => Future[Result]): Future[Result] =

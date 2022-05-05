@@ -1,13 +1,13 @@
 package services.user
 
-import dto.UserDto
-import dto.UserDto.{EMAIL, NAME, NONE_MATCH_EXCEPTION, OVERLAP_EXCEPTION, PATTERNS, PHONE, USER_ID, USER_PW}
+import dto.UserRequestDto
+import dto.UserRequestDto.{EMAIL, NAME, NONE_MATCH_EXCEPTION, OVERLAP_EXCEPTION, PATTERNS, PHONE, USER_ID, USER_PW}
 import models.UserModel
 import scala.concurrent.{ExecutionContext, Future}
 
 object Common {
 	
-	import UserDto._
+	import UserRequestDto._
 	
 	def checkPattern(key: String)(implicit str: String): Future[String] =
 		if (!str.matches(PATTERNS(key))) Future.failed(NONE_MATCH_EXCEPTION(key))
@@ -41,8 +41,8 @@ object Common {
 	def validPhone(implicit phone: String): Future[String] = checkPattern(PHONE)
 	
 	
-	def accountValidation(user: UserDto)
-						 (implicit userModel: UserModel, ec: ExecutionContext): Future[UserDto] = {
+	def accountValidation(user: UserRequestDto)
+						 (implicit userModel: UserModel, ec: ExecutionContext): Future[UserRequestDto] = {
 		for {
 			userId <- validUserId(user.userId.get)
 			userPw <- validUserPw(user.userPw.get)
@@ -52,8 +52,8 @@ object Common {
 		} yield user
 	}
 	
-	def kakaoAccountValidation(user: UserDto)
-							  (implicit userModel: UserModel, ec: ExecutionContext): Future[UserDto] = {
+	def kakaoAccountValidation(user: UserRequestDto)
+							  (implicit userModel: UserModel, ec: ExecutionContext): Future[UserRequestDto] = {
 		for {
 			name <- validName(user.name.get)
 			phone <- validPhone(user.phonenumber.get)

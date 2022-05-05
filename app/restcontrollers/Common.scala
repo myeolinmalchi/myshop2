@@ -18,7 +18,7 @@ object Common {
 			Json.fromJson[A](body) match {
 				case JsSuccess(a, path) => f(a)
 				case e @JsError(_) =>
-					Future.successful(BadRequest)
+					Future.successful(BadRequest(e.toString))
 			}
 		}.getOrElse(Future.successful(BadRequest))
 	}
