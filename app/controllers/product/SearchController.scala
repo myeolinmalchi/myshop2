@@ -38,9 +38,7 @@ class SearchController @Inject()(cc: ControllerComponents,
 	def productDetail(productId: Int): Action[AnyContent] = Action.async { implicit request =>
 		productService getProductById productId map { product =>
 			Ok(views.html.product_detail(product))
-		} recover {
-			case ex: Exception => ex.toJsonError
-		}
+		} getOrElse NotFound
 	}
 	
 	def getOneProductOption: Action[AnyContent] = Action.async { implicit request =>

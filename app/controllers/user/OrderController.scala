@@ -21,14 +21,14 @@ class OrderController @Inject()(cc: ControllerComponents)
 			withAnyJson { value =>
 				val userId = user.userId
 				val cartIdList = (value \ "cartIdList").as[List[Int]]
-				orderService.newOrder(userId.get, cartIdList) trueOrError
+				orderService.newOrder(userId, cartIdList) trueOrError
 			}
 		} endWith
 	}
 	
 	def getOrders: Action[AnyContent]= Action.async { implicit request =>
 		withUser { user =>
-			orderService.getOrderByUserId(user.userId.get) getOrError
+			orderService.getOrderByUserId(user.userId) getOrError
 		} endWith
 	}
 	
@@ -36,7 +36,7 @@ class OrderController @Inject()(cc: ControllerComponents)
 		withUser { user =>
 			withAnyJson { value =>
 				val productId = (value \ "productId").as[Int]
-				orderService.checkUserOrderedThisProduct(user.userId.get, productId) trueOrError
+				orderService.checkUserOrderedThisProduct(user.userId, productId) trueOrError
 			}
 		} endWith
 	}

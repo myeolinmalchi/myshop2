@@ -1,5 +1,6 @@
 package services
 
+import cats.data.OptionT
 import dto._
 import models.{CategoryModel, ProductModel, ReviewModel}
 import models.Tables.Products
@@ -33,8 +34,8 @@ class ProductService @Inject() (productModel: ProductModel,
 		productModel.getProductsSortBy(page, size, orderBy(seq)){ p: Products =>
 			(p.name like s"%${kw}%") && (p.categoryCode like s"${code}%") }
 			
-	def getProductById(productId: Int): Future[ProductDto] =
-		productModel.getProductById(productId)
+	def getProductById(productId: Int): OptionT[Future, ProductDto] =
+		productModel getProductById productId
 		
 	def getReviewsByProductId(productId: Int): Future[List[ReviewDto]] =
 		reviewModel getReviewsByProductId productId

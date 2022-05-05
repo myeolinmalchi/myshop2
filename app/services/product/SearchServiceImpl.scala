@@ -1,5 +1,6 @@
 package services.product
 
+import cats.data.OptionT
 import dto.ProductDto
 import javax.inject.Inject
 import models.ProductModel
@@ -29,6 +30,6 @@ class SearchServiceImpl @Inject() (productModel: ProductModel)
 		productModel.getProductsSortBy(page, size, orderBy(seq)){ p: Products =>
 			(p.name like s"%${kw}%") && (p.categoryCode like s"${code}%") }
 	
-	override def getProductById(productId: Int): Future[ProductDto] =
+	override def getProductById(productId: Int): OptionT[Future, ProductDto] =
 		productModel.getProductById(productId)
 }

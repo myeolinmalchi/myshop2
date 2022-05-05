@@ -1,6 +1,6 @@
 package models
 
-import dto.UserDto
+import dto.UserRequestDto
 import java.time.LocalDateTime
 import java.util.UUID
 import play.api.Logger
@@ -26,7 +26,7 @@ object UserSessionModel {
 		sessions-=session
 	}
 	
-	private def generateToken(implicit request: Request[AnyContent], user: UserDto): String = {
+	private def generateToken(implicit request: Request[AnyContent], user: UserRequestDto): String = {
 		val token = s"${user.userId.get}-user-${UUID.randomUUID().toString}"
 		val time = LocalDateTime.now().plusHours(9)
 		logger.info(s"[$time] User token has been generated: $token")
@@ -34,6 +34,6 @@ object UserSessionModel {
 		token
 	}
 	
-	def newSessionResult(implicit request: Request[AnyContent], user: UserDto): Result =
+	def newSessionResult(implicit request: Request[AnyContent], user: UserRequestDto): Result =
 		Ok(Json.toJson(true)).withSession("sessionToken" -> generateToken)
 }

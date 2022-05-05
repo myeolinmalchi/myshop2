@@ -14,7 +14,7 @@ trait Tables {
   import slick.jdbc.{GetResult => GR}
 
   /** DDL for all tables. Call .create to execute. */
-  lazy val schema: profile.SchemaDescription = Array(CartDetails.schema, Carts.schema, Categories.schema, NonUserCartDetails.schema, NonUserCarts.schema, OrderProductDetails.schema, OrderProducts.schema, Orders.schema, ProductImages.schema, ProductOptionItems.schema, ProductOptions.schema, Products.schema, ProductStock.schema, Qnas.schema, Reviews.schema, Sellers.schema, UserAddresses.schema, Users.schema).reduceLeft(_ ++ _)
+  lazy val schema: profile.SchemaDescription = Array(CartDetails.schema, Carts.schema, Categories.schema, NonUserCartDetails.schema, NonUserCarts.schema, OrderProductDetails.schema, OrderProducts.schema, Orders.schema, ProductImages.schema, ProductOptionItems.schema, ProductOptions.schema, Products.schema, ProductStock.schema, Qnas.schema, ReviewImages.schema, Reviews.schema, Sellers.schema, UserAddresses.schema, Users.schema).reduceLeft(_ ++ _)
   @deprecated("Use .schema instead of .ddl", "3.0")
   def ddl = schema
 
@@ -50,33 +50,27 @@ trait Tables {
   /** Entity class storing rows of table Carts
    *  @param userId Database column user_id SqlType(VARCHAR), Length(20,true)
    *  @param cartId Database column cart_id SqlType(INT), AutoInc, PrimaryKey
-   *  @param name Database column name SqlType(VARCHAR), Length(100,true)
    *  @param productId Database column product_id SqlType(INT)
-   *  @param price Database column price SqlType(INT)
    *  @param quantity Database column quantity SqlType(INT)
    *  @param addedDate Database column added_date SqlType(DATETIME) */
-  case class CartsRow(userId: String, cartId: Int, name: String, productId: Int, price: Int, quantity: Int, addedDate: java.sql.Timestamp)
+  case class CartsRow(userId: String, cartId: Int, productId: Int, quantity: Int, addedDate: java.sql.Timestamp)
   /** GetResult implicit for fetching CartsRow objects using plain SQL queries */
   implicit def GetResultCartsRow(implicit e0: GR[String], e1: GR[Int], e2: GR[java.sql.Timestamp]): GR[CartsRow] = GR{
     prs => import prs._
-    CartsRow.tupled((<<[String], <<[Int], <<[String], <<[Int], <<[Int], <<[Int], <<[java.sql.Timestamp]))
+    CartsRow.tupled((<<[String], <<[Int], <<[Int], <<[Int], <<[java.sql.Timestamp]))
   }
   /** Table description of table carts. Objects of this class serve as prototypes for rows in queries. */
   class Carts(_tableTag: Tag) extends profile.api.Table[CartsRow](_tableTag, Some("myshop2"), "carts") {
-    def * = (userId, cartId, name, productId, price, quantity, addedDate) <> (CartsRow.tupled, CartsRow.unapply)
+    def * = (userId, cartId, productId, quantity, addedDate) <> (CartsRow.tupled, CartsRow.unapply)
     /** Maps whole row to an option. Useful for outer joins. */
-    def ? = ((Rep.Some(userId), Rep.Some(cartId), Rep.Some(name), Rep.Some(productId), Rep.Some(price), Rep.Some(quantity), Rep.Some(addedDate))).shaped.<>({r=>import r._; _1.map(_=> CartsRow.tupled((_1.get, _2.get, _3.get, _4.get, _5.get, _6.get, _7.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+    def ? = ((Rep.Some(userId), Rep.Some(cartId), Rep.Some(productId), Rep.Some(quantity), Rep.Some(addedDate))).shaped.<>({r=>import r._; _1.map(_=> CartsRow.tupled((_1.get, _2.get, _3.get, _4.get, _5.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
 
     /** Database column user_id SqlType(VARCHAR), Length(20,true) */
     val userId: Rep[String] = column[String]("user_id", O.Length(20,varying=true))
     /** Database column cart_id SqlType(INT), AutoInc, PrimaryKey */
     val cartId: Rep[Int] = column[Int]("cart_id", O.AutoInc, O.PrimaryKey)
-    /** Database column name SqlType(VARCHAR), Length(100,true) */
-    val name: Rep[String] = column[String]("name", O.Length(100,varying=true))
     /** Database column product_id SqlType(INT) */
     val productId: Rep[Int] = column[Int]("product_id")
-    /** Database column price SqlType(INT) */
-    val price: Rep[Int] = column[Int]("price")
     /** Database column quantity SqlType(INT) */
     val quantity: Rep[Int] = column[Int]("quantity")
     /** Database column added_date SqlType(DATETIME) */
@@ -531,6 +525,38 @@ trait Tables {
   }
   /** Collection-like TableQuery object for table Qnas */
   lazy val Qnas = new TableQuery(tag => new Qnas(tag))
+
+  /** Entity class storing rows of table ReviewImages
+   *  @param reviewId Database column review_id SqlType(INT)
+   *  @param reviewImageId Database column review_image_id SqlType(INT), PrimaryKey
+   *  @param image Database column image SqlType(LONGTEXT), Length(2147483647,true)
+   *  @param sequence Database column sequence SqlType(INT) */
+  case class ReviewImagesRow(reviewId: Int, reviewImageId: Int, image: String, sequence: Int)
+  /** GetResult implicit for fetching ReviewImagesRow objects using plain SQL queries */
+  implicit def GetResultReviewImagesRow(implicit e0: GR[Int], e1: GR[String]): GR[ReviewImagesRow] = GR{
+    prs => import prs._
+    ReviewImagesRow.tupled((<<[Int], <<[Int], <<[String], <<[Int]))
+  }
+  /** Table description of table review_images. Objects of this class serve as prototypes for rows in queries. */
+  class ReviewImages(_tableTag: Tag) extends profile.api.Table[ReviewImagesRow](_tableTag, Some("myshop2"), "review_images") {
+    def * = (reviewId, reviewImageId, image, sequence) <> (ReviewImagesRow.tupled, ReviewImagesRow.unapply)
+    /** Maps whole row to an option. Useful for outer joins. */
+    def ? = ((Rep.Some(reviewId), Rep.Some(reviewImageId), Rep.Some(image), Rep.Some(sequence))).shaped.<>({r=>import r._; _1.map(_=> ReviewImagesRow.tupled((_1.get, _2.get, _3.get, _4.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+
+    /** Database column review_id SqlType(INT) */
+    val reviewId: Rep[Int] = column[Int]("review_id")
+    /** Database column review_image_id SqlType(INT), PrimaryKey */
+    val reviewImageId: Rep[Int] = column[Int]("review_image_id", O.PrimaryKey)
+    /** Database column image SqlType(LONGTEXT), Length(2147483647,true) */
+    val image: Rep[String] = column[String]("image", O.Length(2147483647,varying=true))
+    /** Database column sequence SqlType(INT) */
+    val sequence: Rep[Int] = column[Int]("sequence")
+
+    /** Foreign key referencing Reviews (database name FK__reviews) */
+    lazy val reviewsFk = foreignKey("FK__reviews", reviewId, Reviews)(r => r.reviewId, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
+  }
+  /** Collection-like TableQuery object for table ReviewImages */
+  lazy val ReviewImages = new TableQuery(tag => new ReviewImages(tag))
 
   /** Entity class storing rows of table Reviews
    *  @param productId Database column product_id SqlType(INT)

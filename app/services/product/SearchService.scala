@@ -1,5 +1,6 @@
 package services.product
 
+import cats.data.OptionT
 import com.google.inject.ImplementedBy
 import dto.ProductDto
 import scala.concurrent.Future
@@ -11,6 +12,6 @@ trait SearchService {
 	def getProductCount(kw: String, code: String): Future[Int]
 	def searchProductsBy(kw: String, code: String,
 						 seq: Int, page: Int, size: Int): Future[List[ProductDto]]
-	def getProductById(productId: Int): Future[ProductDto]
+	def getProductById(productId: Int): OptionT[Future, ProductDto]
 	
 }

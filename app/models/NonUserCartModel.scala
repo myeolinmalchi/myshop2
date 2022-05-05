@@ -62,34 +62,57 @@ class NonUserCartModel @Inject() (val dbConfigProvider: DatabaseConfigProvider,
 		db run query
 	}
 	
-	
-	private def insertCart(cart: CartDto)(f: CartDto => Future[Int]) = cart.itemList match {
-		case Nil => Future.failed(new Exception("옵션이 비어있습니다."))
-		case h::t => {
-			val surcharge = (h::t).map(_.surcharge).sum
-			val query = NonUserCarts returning NonUserCarts.map(_.nonUserCartId)
-			val row = NonUserCartsRow(cart.userId, 0,cart.name, cart.productId,
-				cart.price, cart.quantity+surcharge, new Timestamp(System.currentTimeMillis()))
-			db run (query+=row) map(id => cart.setId(id)) flatMap(f(_))
+	def insertCartQuery(cart: CartRequestDto)
+					   (f: CartRequestDto => DBIOAction[Int, NoStream, Effect.Write]): DBIOAction[Int,NoStream,Effect.All] = {
+		val query = NonUserCarts returning NonUserCarts.map(_.nonUserCartId)
+		val row = (surcharge: Int) => NonUserCartsRow(cart.userId, 0,cart.name.get, cart.productId,
+			cart.price.get, cart.quantity+surcharge, new Timestamp(System.currentTimeMillis()))
+		
+		def sequence[A](l: List[Option[A]]): Option[List[A]]= l match {
+			case Nil => Some(Nil)
+			case h :: t => h match {
+				case None => None
+				case Some(head) => sequence(t) match {
+					case None => None
+					case Some(list) => Some(head :: list)
+				}
+			}
 		}
+		
+		(for {
+			surchargeOptions <- DBIO.sequence(
+				cart.itemList map { itemId =>
+					ProductOptionItems
+							.filter(_.productOptionItemId === itemId)
+							.map(_.surcharge)
+							.result
+							.headOption
+				}
+			)
+			surchargeOption = sequence(surchargeOptions).map(_.sum)
+			cartId <- query += row(surchargeOption.getOrElse(throw new NoSuchElementException))
+		} yield cartId) map(id => cart) flatMap(f(_))
 	}
 	
-	private def insertDetail(itemId: Int, cartId: Int) = {
-		println(cartId)
-		db run (NonUserCartDetails += NonUserCartDetailsRow(cartId, 0, itemId))
-	}
-	
-	def addCart(cart: CartDto): Future[Int]= {
+	private def insertDetailQuery(itemId: Int, cartId: Int) =
+		NonUserCartDetails += NonUserCartDetailsRow(cartId, 0, itemId)
+		
+	def addCart(cart: CartRequestDto): Future[Int] =
 		productModel.getProductOptionsCount(cart.productId) flatMap {
 			case count: Int if count == cart.itemList.size =>
-				insertCart(cart) { cart =>
-					cart.itemList.traverse { item =>
-						insertDetail(item.productOptionItemId, cart.cartId)
-					} map (_.sum)
+				db run insertCartQuery(cart) { cart =>
+					DBIO.sequence(
+						cart.itemList map { itemId =>
+							insertDetailQuery(
+								itemId,
+								cart.cartId.getOrElse(throw new Exception())
+							)
+						}
+					) map(_.sum)
 				}
 			case _ => Future.failed(throw new Exception("모든 옵션을 지정해주세요."))
 		}
-	}
+	
 	
 	def deleteCart(implicit cartId: Int): Future[Int] =
 		db run cartIdQuery.delete
