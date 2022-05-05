@@ -3,13 +3,13 @@ package controllers.user
 import common.json.CustomJsonApi._
 import controllers.Common._
 import controllers.user.CommonApi._
-import dto.CartDto
+import dto.{CartDto, CartRequestDto}
 import javax.inject.{Inject, Singleton}
 import play.api.mvc._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import services.user._
-import services.{NonUserService}
+import services.NonUserService
 
 @Singleton
 class CartController @Inject()(cc: ControllerComponents)
@@ -31,14 +31,14 @@ class CartController @Inject()(cc: ControllerComponents)
 	
 	def cartList: Action[AnyContent] = Action.async { implicit request =>
 		withUser { implicit user =>
-			cartService.getCarts(user.userId.get) cartOrError
+			cartService.getCarts(user.userId) cartOrError
 		} ifNot withNonUserToken { token =>
 			nonUserService.getCarts(token) cartOrError
 		}
 	}
 	
 	def addCart(): Action[AnyContent] = Action.async { implicit request =>
-		withJsonDto[CartDto] { implicit cart =>
+		withJsonDto[CartRequestDto] { implicit cart =>
 			withUser { _ =>
 				cartService.addCart trueOrError
 			} ifNot withNonUserToken { _ =>
