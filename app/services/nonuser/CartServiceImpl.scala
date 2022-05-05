@@ -1,6 +1,6 @@
 package services.nonuser
 
-import dto.CartDto
+import dto.{CartDto, CartRequestDto}
 import javax.inject._
 import models.{NonUserCartModel, ProductModel}
 import scala.concurrent.{ExecutionContext, Future}
@@ -30,9 +30,8 @@ class CartServiceImpl @Inject() (cartModel: NonUserCartModel,
 		}
 	}
 	
-	def addCart(cart: CartDto): Future[Int] = {
-		val is = cart.itemList.map(_.productOptionItemId)
-		productModel checkStock(is, cart.quantity) flatMap {
+	def addCart(cart: CartRequestDto): Future[Int] = {
+		productModel checkStock(cart.itemList, cart.quantity) flatMap {
 			case (stock, false) => outOfStockException(stock)
 			case (_, true) => cartModel addCart cart
 		}
