@@ -71,10 +71,10 @@ POST    /category/siblings                                  controllers.product.
 
 # User Account
 POST    /api/v1/user/login                                  restcontrollers.user.AccountController.login
-POST    /api/v1/user                                        restcontrollers.user.AccountController.register
+POST    /api/v1/user                                        restcontrollers.user.AccountController.regist
 
 POST    /api/v1/user/login/kakao                            restcontrollers.user.AccountController.kakaoLogin
-POST    /api/v1/user/kakao                                  restcontrollers.user.AccountController.kakaoRegister
+POST    /api/v1/user/kakao                                  restcontrollers.user.AccountController.kakaoRegist
 
 # Carts
 GET     /api/v1/user/:userId/cart                           restcontrollers.user.CartController.getCarts(userId)
@@ -90,6 +90,12 @@ POST    /api/v1/user/:userId/order                          restcontrollers.user
 
 GET     /api/v1/user/:userId/product/:productId             restcontrollers.user.OrderController.checkUserOrdered(userId,productId: Int)
 
+# Reviews
+#POST    /api/v1/user/:userId/review
+#PUT     /api/v1/user/:userId/review/:reviewId
+#GET     /api/v1/user/:userId/review/:reviewId
+#DELETE  /api/v1/user/:userId/review/:reviewId
+
 # Product Categories
 GET     /api/v1/category/main                               restcontrollers.product.CategoryController.getMainCategories
 GET     /api/v1/category/:code/sibling                      restcontrollers.product.CategoryController.getSiblings(code)
@@ -98,6 +104,8 @@ GET     /api/v1/category/:code/children                     restcontrollers.prod
 # Product Search
 GET     /api/v1/product/search/:keyword                     restcontrollers.product.SearchController.search(code: Option[String], keyword, page: Option[Int], size: Option[Int],seq: Option[Int])
 GET     /api/v1/product/:productId                          restcontrollers.product.SearchController.getProduct(productId: Int)
+
+GET     /api/v1/product/:productId/review                   restcontrollers.product.SearchController.getReviews(productId: Int)
 
 # Seller Account
 POST    /api/v1/seller/login                                restcontrollers.seller.AccountController.login
