@@ -8,11 +8,17 @@ import play.api.libs.json.{Json, Reads, Writes}
 import scala.collection.mutable.Map
 import scala.language.implicitConversions
 
-case class UserDto(userId: Option[String] = None,
-				   userPw: Option[String] = None,
-				   name: Option[String] = None,
-				   email: Option[String] = None,
-				   phonenumber: Option[String] = None)
+case class UserDto(userId: String,
+				   userPw: String,
+				   name: String,
+				   email: String,
+				   phonenumber: String)
+
+case class UserRequestDto(userId: Option[String] = None,
+						  userPw: Option[String] = None,
+						  name: Option[String] = None,
+						  email: Option[String] = None,
+						  phonenumber: Option[String] = None)
 
 case class AddressDto(userId: String,
 					  addressId: Int,
@@ -21,7 +27,23 @@ case class AddressDto(userId: String,
 					  addressDetail: String,
 					  zipcode: Int)
 
-object UserDto{
+object UserDto {
+	implicit class RowToDto(row: UsersRow) {
+		def toDto: UserDto =
+			UserDto (
+				userId = row.userId,
+				userPw = row.userPw,
+				name = row.name,
+				email = row.email,
+				phonenumber = row.phonenumber
+			)
+	}
+	
+	implicit def writes: Writes[UserDto] = Json.writes[UserDto]
+	implicit def reads: Reads[UserDto] = Json.reads[UserDto]
+}
+
+object UserRequestDto{
 	
 	val USER_ID = "userId"
 	val USER_PW = "userPw"
@@ -63,22 +85,10 @@ object UserDto{
 		EMAIL -> "이미 존재하는 이메일입니다."
 	)
 	
-	def empty: UserDto = UserDto()
+	def empty: UserRequestDto = UserRequestDto()
 	
-	implicit class RowToDto(row: UsersRow) {
-		def toDto: UserDto =
-			UserDto (
-				userId = Some(row.userId),
-				userPw = Some(row.userPw),
-				name = Some(row.name),
-				email = Some(row.email),
-				phonenumber = Some(row.phonenumber)
-			)
-	}
-	
-	implicit def writes: Writes[UserDto] = Json.writes[UserDto]
-
-	implicit def reads: Reads[UserDto] = Json.reads[UserDto]
+	implicit def writes: Writes[UserRequestDto] = Json.writes[UserRequestDto]
+	implicit def reads: Reads[UserRequestDto] = Json.reads[UserRequestDto]
 }
 
 object AddressDto{
