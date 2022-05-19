@@ -566,19 +566,20 @@ trait Tables {
    *  @param title Database column title SqlType(VARCHAR), Length(200,true)
    *  @param content Database column content SqlType(VARCHAR), Length(2000,true)
    *  @param comment Database column comment SqlType(VARCHAR), Length(500,true)
-   *  @param reviewDate Database column review_date SqlType(DATE)
-   *  @param recommend Database column recommend SqlType(INT) */
-  case class ReviewsRow(productId: Int, reviewId: Int, userId: String, rating: Int, title: String, content: String, comment: String, reviewDate: java.sql.Date, recommend: Int)
+   *  @param reviewDate Database column review_date SqlType(TIMESTAMP)
+   *  @param recommend Database column recommend SqlType(INT)
+   *  @param orderProductId Database column order_product_id SqlType(INT) */
+  case class ReviewsRow(productId: Int, reviewId: Int, userId: String, rating: Int, title: String, content: String, comment: String, reviewDate: java.sql.Timestamp, recommend: Int, orderProductId: Int)
   /** GetResult implicit for fetching ReviewsRow objects using plain SQL queries */
-  implicit def GetResultReviewsRow(implicit e0: GR[Int], e1: GR[String], e2: GR[java.sql.Date]): GR[ReviewsRow] = GR{
+  implicit def GetResultReviewsRow(implicit e0: GR[Int], e1: GR[String], e2: GR[java.sql.Timestamp]): GR[ReviewsRow] = GR{
     prs => import prs._
-    ReviewsRow.tupled((<<[Int], <<[Int], <<[String], <<[Int], <<[String], <<[String], <<[String], <<[java.sql.Date], <<[Int]))
+    ReviewsRow.tupled((<<[Int], <<[Int], <<[String], <<[Int], <<[String], <<[String], <<[String], <<[java.sql.Timestamp], <<[Int], <<[Int]))
   }
   /** Table description of table reviews. Objects of this class serve as prototypes for rows in queries. */
   class Reviews(_tableTag: Tag) extends profile.api.Table[ReviewsRow](_tableTag, Some("myshop2"), "reviews") {
-    def * = (productId, reviewId, userId, rating, title, content, comment, reviewDate, recommend) <> (ReviewsRow.tupled, ReviewsRow.unapply)
+    def * = (productId, reviewId, userId, rating, title, content, comment, reviewDate, recommend, orderProductId) <> (ReviewsRow.tupled, ReviewsRow.unapply)
     /** Maps whole row to an option. Useful for outer joins. */
-    def ? = ((Rep.Some(productId), Rep.Some(reviewId), Rep.Some(userId), Rep.Some(rating), Rep.Some(title), Rep.Some(content), Rep.Some(comment), Rep.Some(reviewDate), Rep.Some(recommend))).shaped.<>({r=>import r._; _1.map(_=> ReviewsRow.tupled((_1.get, _2.get, _3.get, _4.get, _5.get, _6.get, _7.get, _8.get, _9.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+    def ? = ((Rep.Some(productId), Rep.Some(reviewId), Rep.Some(userId), Rep.Some(rating), Rep.Some(title), Rep.Some(content), Rep.Some(comment), Rep.Some(reviewDate), Rep.Some(recommend), Rep.Some(orderProductId))).shaped.<>({r=>import r._; _1.map(_=> ReviewsRow.tupled((_1.get, _2.get, _3.get, _4.get, _5.get, _6.get, _7.get, _8.get, _9.get, _10.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
 
     /** Database column product_id SqlType(INT) */
     val productId: Rep[Int] = column[Int]("product_id")
@@ -594,13 +595,17 @@ trait Tables {
     val content: Rep[String] = column[String]("content", O.Length(2000,varying=true))
     /** Database column comment SqlType(VARCHAR), Length(500,true) */
     val comment: Rep[String] = column[String]("comment", O.Length(500,varying=true))
-    /** Database column review_date SqlType(DATE) */
-    val reviewDate: Rep[java.sql.Date] = column[java.sql.Date]("review_date")
+    /** Database column review_date SqlType(TIMESTAMP) */
+    val reviewDate: Rep[java.sql.Timestamp] = column[java.sql.Timestamp]("review_date")
     /** Database column recommend SqlType(INT) */
     val recommend: Rep[Int] = column[Int]("recommend")
+    /** Database column order_product_id SqlType(INT) */
+    val orderProductId: Rep[Int] = column[Int]("order_product_id")
 
+    /** Foreign key referencing OrderProducts (database name FK_reviews_order_products) */
+    lazy val orderProductsFk = foreignKey("FK_reviews_order_products", orderProductId, OrderProducts)(r => r.orderProductId, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
     /** Foreign key referencing Products (database name reviews_ibfk_2) */
-    lazy val productsFk = foreignKey("reviews_ibfk_2", productId, Products)(r => r.productId, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Restrict)
+    lazy val productsFk = foreignKey("reviews_ibfk_2", productId, Products)(r => r.productId, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
     /** Foreign key referencing Users (database name reviews_ibfk_1) */
     lazy val usersFk = foreignKey("reviews_ibfk_1", userId, Users)(r => r.userId, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
   }

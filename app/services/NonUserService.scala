@@ -2,7 +2,7 @@ package services
 
 import dto.{CartDto, CartRequestDto}
 import javax.inject._
-import models.{NonUserCartModel, ProductModel}
+import models.{NonUserCartModelImpl, ProductModel}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import slick.jdbc.MySQLProfile.api._
@@ -14,24 +14,18 @@ import slick.jdbc.MySQLProfile.api._
  * 작성일 2022-03-17
  **/
 @Singleton
-class NonUserService @Inject() (cartModel: NonUserCartModel,
-								productModel: ProductModel)
+class NonUserService @Inject() (cartModel: NonUserCartModelImpl,
+																productModel: ProductModel)
 							   (implicit ec: ExecutionContext) {
-	
-	def addQuantity(implicit cartId: Int): Future[Int] = cartModel addQuantity
-	
-	def subQuantity(implicit cartId: Int): Future[Int] = cartModel subQuantity
 	
 	private val outOfStockException = (stock: Int) =>
 		Future.failed(new Exception(s"재고가 부족합니다! (남은 수량: ${stock})"))
 	
-	def updateQuantity(q: Int)(implicit cartId: Int): Future[Int] = {
-		cartModel getCartByCartId cartId flatMap { cart =>
-			println(cart.itemList.size)
-			val is = cart.itemList.map(_.productOptionItemId)
-			productModel checkStock(is, q) flatMap {
+	def updateQuantity(quantity: Int, cartId: Int): Future[Int] = {
+		cartModel getItemIdsByCartId cartId flatMap { ids =>
+			productModel checkStock(ids, quantity) flatMap {
 				case (stock, false) => outOfStockException(stock)
-				case (_, true) => cartModel updateQuantity (q, cartId)
+				case (_, false) => cartModel updateQuantity(quantity, cartId)
 			}
 		}
 	}
@@ -39,17 +33,17 @@ class NonUserService @Inject() (cartModel: NonUserCartModel,
 	def addCart(cart: CartRequestDto): Future[Int] = {
 		productModel checkStock(cart.itemList, cart.quantity) flatMap {
 			case (stock, false) => outOfStockException(stock)
-			case (_, true) => cartModel addCart cart
+			case (_, true) => cartModel insertCart cart
 		}
 	}
 	
 	def getCarts(implicit idToken: String): Future[List[CartDto]] =
-		cartModel getCartsByIdToken
+		cartModel getCartsByToken idToken
 	
 	def getCart(implicit cartId: Int): Future[CartDto] =
-		cartModel getCartByCartId
+		cartModel.getCartByCartId(cartId).map(_.getOrElse(throw new Exception))
 	
 	def deleteCart(implicit cartId: Int): Future[Int] =
-		cartModel deleteCart
+		cartModel deleteCart cartId
 	
 }

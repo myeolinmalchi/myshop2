@@ -90,7 +90,7 @@ POST    /api/v1/user/:userId/order                          restcontrollers.user
 
 GET     /api/v1/user/:userId/product/:productId             restcontrollers.user.OrderController.checkUserOrdered(userId,productId: Int)
 
-# Reviews
+# User Reviews
 #POST    /api/v1/user/:userId/review
 #PUT     /api/v1/user/:userId/review/:reviewId
 #GET     /api/v1/user/:userId/review/:reviewId
@@ -104,8 +104,7 @@ GET     /api/v1/category/:code/children                     restcontrollers.prod
 # Product Search
 GET     /api/v1/product/search/:keyword                     restcontrollers.product.SearchController.search(code: Option[String], keyword, page: Option[Int], size: Option[Int],seq: Option[Int])
 GET     /api/v1/product/:productId                          restcontrollers.product.SearchController.getProduct(productId: Int)
-
-GET     /api/v1/product/:productId/review                   restcontrollers.product.SearchController.getReviews(productId: Int)
+GET     /api/v1/product/:productId/reviews                  restcontrollers.product.SearchController.getReviews(productId: Int, size: Option[Int], page: Option[Int])
 
 # Seller Account
 POST    /api/v1/seller/login                                restcontrollers.seller.AccountController.login

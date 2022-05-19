@@ -3,9 +3,12 @@ package common.validation
 import cats.Monad
 import cats.data.{EitherT, OptionT}
 
+
+object ValidationResultLib {
+	abstract class ValidationFailure
+	case class ValidationFailureTemp(msg: String) extends ValidationFailure
+}
 trait ValidationResultLib[M[_]] {
-	
-	case class ValidationFailure(msg: String)
 	
 	type ValidationResult[F, S] = EitherT[M, F, S]
 	

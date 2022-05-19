@@ -2,26 +2,28 @@ package services
 
 import cats.data.OptionT
 import dto._
-import models.{CategoryModel, ProductModel, ReviewModel}
+import javax.inject._
 import models.Tables.Products
+import models.{CategoryModel, ProductModel, ReviewModel}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import slick.jdbc.MySQLProfile.api._
-import javax.inject._
 
 @Singleton
-class ProductService @Inject() (productModel: ProductModel,
-								categoryModel: CategoryModel,
-								reviewModel: ReviewModel)
-							   (implicit ec: ExecutionContext) {
+class ProductService @Inject()(productModel: ProductModel,
+															 categoryModel: CategoryModel,
+															 reviewModel: ReviewModel)
+															(implicit ec: ExecutionContext) {
 	
 	def searchProducts(kw: String, code: String): Future[List[ProductDto]] =
 		productModel getProducts { product =>
-			(product.name like s"%${kw}%") && (product.categoryCode like s"${code}%") }
-			
+			(product.name like s"%${kw}%") && (product.categoryCode like s"${code}%")
+		}
+	
 	def getProductCount(kw: String, code: String): Future[Int] =
 		productModel getProductsCount { product =>
-			(product.name like s"%${kw}%") && (product.categoryCode like s"${code}%") }
+			(product.name like s"%${kw}%") && (product.categoryCode like s"${code}%")
+		}
 	
 	private val orderBy = Vector(
 		(p: Products) => p.price.asc,
@@ -30,19 +32,20 @@ class ProductService @Inject() (productModel: ProductModel,
 	)
 	
 	def searchProductsBy(kw: String, code: String,
-						 seq: Int, page: Int, size: Int): Future[List[ProductDto]] =
-		productModel.getProductsSortBy(page, size, orderBy(seq)){ p: Products =>
-			(p.name like s"%${kw}%") && (p.categoryCode like s"${code}%") }
-			
+											 seq: Int, page: Int, size: Int): Future[List[ProductDto]] =
+		productModel.getProductsSortBy(page, size, orderBy(seq)) { p: Products =>
+			(p.name like s"%${kw}%") && (p.categoryCode like s"${code}%")
+		}
+	
 	def getProductById(productId: Int): OptionT[Future, ProductDto] =
 		productModel getProductById productId
-		
-	def getReviewsByProductId(productId: Int): Future[List[ReviewDto]] =
+	
+	def getReviewsByProductId(productId: Int): Future[List[ReviewResponseDto]] =
 		reviewModel getReviewsByProductId productId
 	
 	def getProductStock(productId: Int): Future[List[StockResponseDto]] =
-		productModel getProductStock(productId)
-		
+		productModel getProductStock (productId)
+	
 	def getSellerId(productId: Int): Future[String] = ???
 	
 	def getProductOptionStock(productId: Int, depth: Int, parentId: Int): Future[List[StockResponseDto]] =

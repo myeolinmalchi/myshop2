@@ -1,0 +1,51 @@
+### 사용자 장바구니 불러오기
+GET http://localhost:9000/api/v1/user/kkk3311/cart
+Content-Type: application/json
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE2NTA4MjU4NzAsImlhdCI6MTY1MDczOTQ3MCwNCiAJImlkIjogImtrazMzMTEiLA0KCSJyb2xlIjogInVzZXIiDQogfQ.g5or4fAMxI8BsA7g1GiEDS_jdPmZgtDr2z02P0l0JYA
+
+### 장바구니 추가
+POST http://localhost:9000/api/v1/user/kkk3311/cart
+Content-Type: application/json
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE2NTA4MjU4NzAsImlhdCI6MTY1MDczOTQ3MCwNCiAJImlkIjogImtrazMzMTEiLA0KCSJyb2xlIjogInVzZXIiDQogfQ.g5or4fAMxI8BsA7g1GiEDS_jdPmZgtDr2z02P0l0JYA
+
+{
+  "userId": "kkk3311",
+  "cartId": 131,
+  "name": "test(항목1-1, 항목2-2)",
+  "productId": 713,
+  "price": 30000,
+  "quantity": 5,
+  "addedDate": 1650800568169,
+  "itemList": [
+    {
+      "productOptionId": 936,
+      "productOptionItemId": 1444,
+      "name": "항목1-1",
+      "itemSequence": 1,
+      "surcharge": 0
+    },
+    {
+      "productOptionId": 937,
+      "productOptionItemId": 1447,
+      "name": "항목2-2",
+      "itemSequence": 2,
+      "surcharge": 0
+    }
+  ]
+}
+
+### 장바구니 ID로 불러오기
+GET http://localhost:9000/api/v1/user/kkk3311/cart/131
+Content-Type: application/json
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE2NTA4MjU4NzAsImlhdCI6MTY1MDczOTQ3MCwNCiAJImlkIjogImtrazMzMTEiLA0KCSJyb2xlIjogInVzZXIiDQogfQ.g5or4fAMxI8BsA7g1GiEDS_jdPmZgtDr2z02P0l0JYA
+
+### 장바구니 수량 조절
+PUT http://localhost:9000/api/v1/user/kkk3311/cart/131
+Content-Type: application/json
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE2NTA4MjU4NzAsImlhdCI6MTY1MDczOTQ3MCwNCiAJImlkIjogImtrazMzMTEiLA0KCSJyb2xlIjogInVzZXIiDQogfQ.g5or4fAMxI8BsA7g1GiEDS_jdPmZgtDr2z02P0l0JYA
+
+### 장바구니 삭제
+DELETE http://localhost:9000/api/v1/user/kkk3311/cart/131
+Content-Type: application/json
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE2NTA4MjU4NzAsImlhdCI6MTY1MDczOTQ3MCwNCiAJImlkIjogImtrazMzMTEiLA0KCSJyb2xlIjogInVzZXIiDQogfQ.g5or4fAMxI8BsA7g1GiEDS_jdPmZgtDr2z02P0l0JYA
+

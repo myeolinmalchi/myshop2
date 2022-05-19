@@ -33,7 +33,10 @@ case class CartRequestDto(userId: String,
 						  price: Option[Int],
 						  quantity: Int,
 						  addedDate: Option[Date],
-						  itemList: List[Int]=Nil)
+						  itemList: List[Int]=Nil) {
+	def setUserId(userId: String): CartRequestDto =
+		CartRequestDto(userId, cartId, name, productId, price, quantity, addedDate, itemList)
+}
 
 object CartDto {
 	

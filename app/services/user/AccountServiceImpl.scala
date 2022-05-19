@@ -1,55 +1,55 @@
 package services.user
 
-import cats.data.{EitherT, OptionT}
+import cats.data.OptionT
 import common.validation.ValidationResultLib
-import dto.{UserDto, UserRequestDto}
+import common.validation.ValidationResultLib.ValidationFailureTemp
 import dto.UserRequestDto.{EMAIL, NAME, NONE_MATCH_MSG, OVERLAP_MSG, PATTERNS, PHONE, USER_ID, USER_PW}
+import dto.{UserDto, UserRequestDto}
 import javax.inject.{Inject, Singleton}
 import models.UserModel
 import play.api.libs.ws.WSClient
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
-import services.user.Common._
 
 @Singleton
-class AccountServiceImpl @Inject() ()(implicit ws: WSClient, ec: ExecutionContext, userModel: UserModel)
-		extends AccountService with ValidationResultLib[Future]{
+class AccountServiceImpl @Inject()()(implicit ws: WSClient, ec: ExecutionContext, userModel: UserModel)
+		extends AccountService with ValidationResultLib[Future] {
 	
 	implicit class UserValidator(user: UserRequestDto) {
-		private def checkPattern(str: String, key: String): ValidationResult[ValidationFailure, Unit] =
+		private def checkPattern(str: String, key: String): ValidationResult[ValidationFailureTemp, Unit] =
 			ValidationResult.ensure(
 				str.matches(PATTERNS(key)),
-				onFailure = ValidationFailure(NONE_MATCH_MSG(key))
+				onFailure = ValidationFailureTemp(NONE_MATCH_MSG(key))
 			)
 		
-		private def validUserId(userId: String): ValidationResult[ValidationFailure, Unit] =
+		private def validUserId(userId: String): ValidationResult[ValidationFailureTemp, Unit] =
 			for {
 				_ <- checkPattern(userId, USER_ID)
 				_ <- ValidationResult.ensureM(
 					userModel userIdDoesNotExist userId,
-					onFailure = ValidationFailure(OVERLAP_MSG(USER_ID))
+					onFailure = ValidationFailureTemp(OVERLAP_MSG(USER_ID))
 				)
 			} yield ()
 		
-		private def validUserPw(userPw: String): ValidationResult[ValidationFailure, Unit] =
+		private def validUserPw(userPw: String): ValidationResult[ValidationFailureTemp, Unit] =
 			checkPattern(userPw, USER_PW)
 		
-		private def validName(name: String): ValidationResult[ValidationFailure, Unit] =
+		private def validName(name: String): ValidationResult[ValidationFailureTemp, Unit] =
 			checkPattern(name, NAME)
 		
-		private def validEmail(email: String): ValidationResult[ValidationFailure, Unit] =
+		private def validEmail(email: String): ValidationResult[ValidationFailureTemp, Unit] =
 			for {
 				_ <- checkPattern(email, EMAIL)
 				_ <- ValidationResult.ensureM(
 					userModel emailDoesNotExist email,
-					onFailure = ValidationFailure(OVERLAP_MSG(EMAIL))
+					onFailure = ValidationFailureTemp(OVERLAP_MSG(EMAIL))
 				)
 			} yield ()
 		
-		private def validPhone(phone: String): ValidationResult[ValidationFailure, Unit] =
+		private def validPhone(phone: String): ValidationResult[ValidationFailureTemp, Unit] =
 			checkPattern(phone, PHONE)
-			
-		def accountValidation: Option[ValidationResult[ValidationFailure, UserDto]] =
+		
+		def accountValidation: Option[ValidationResult[ValidationFailureTemp, UserDto]] =
 			for {
 				userId <- user.userId
 				userPw <- user.userPw
@@ -64,7 +64,7 @@ class AccountServiceImpl @Inject() ()(implicit ws: WSClient, ec: ExecutionContex
 				_ <- validPhone(phone)
 			} yield UserDto(userId, userPw, name, email, phone)
 		
-		def kakaoAccountValidation: Option[ValidationResult[ValidationFailure, UserDto]] =
+		def kakaoAccountValidation: Option[ValidationResult[ValidationFailureTemp, UserDto]] =
 			for {
 				userId <- user.userId
 				userPw <- user.userPw
@@ -84,25 +84,25 @@ class AccountServiceImpl @Inject() ()(implicit ws: WSClient, ec: ExecutionContex
 			correctPw <- userModel getUserPassword userId
 		} yield enteredPw.equals(correctPw)
 	
-	private def commonRegist(f: UserRequestDto => Option[ValidationResult[ValidationFailure, UserDto]])
-							(implicit user: UserRequestDto): Future[Either[ValidationFailure, Unit]] =
+	private def commonRegist(f: UserRequestDto => Option[ValidationResult[ValidationFailureTemp, UserDto]])
+							(implicit user: UserRequestDto): Future[Either[ValidationFailureTemp, Unit]] =
 		(for {
 			validationResult <- OptionT.fromOption[Future](f(user))
-			affResult <- OptionT.liftF (
+			affResult <- OptionT.liftF(
 				validationResult.onSuccess { user => userModel insertUser user }
 			)
 		} yield affResult) map {
 			case Right(aff) if aff == 1 => Right()
-			case Right(_) => Left(ValidationFailure("회원가입에 실패했습니다."))
+			case Right(_) => Left(ValidationFailureTemp("회원가입에 실패했습니다."))
 			case Left(failure) => Left(failure)
-		} getOrElse(throw new NoSuchElementException)
+		} getOrElse (throw new NoSuchElementException("올바른 요청이 아닙니다."))
 	
-	override def regist(implicit user: UserRequestDto): Future[Either[ValidationFailure, Unit]] =
+	override def regist(implicit user: UserRequestDto): Future[Either[ValidationFailureTemp, Unit]] =
 		commonRegist(_.accountValidation)
-		
-	override def kakaoRegist(implicit user: UserRequestDto): Future[Either[ValidationFailure, Unit]] =
+	
+	override def kakaoRegist(implicit user: UserRequestDto): Future[Either[ValidationFailureTemp, Unit]] =
 		commonRegist(_.kakaoAccountValidation)
-		
+	
 	// TODO: Access Token이 유효하지 않을 경우
 	override def getUserInfoByKakaoAccessToken(accessToken: String): Future[(String, String)] = {
 		ws.url("https://kapi.kakao.com/v2/user/me")
@@ -123,6 +123,6 @@ class AccountServiceImpl @Inject() ()(implicit ws: WSClient, ec: ExecutionContex
 		userModel getUserByEmail email
 	
 	override def userIdExist(userId: String): Future[Boolean] =
-		userModel userIdDoesNotExist userId map(!_)
+		userModel userIdDoesNotExist userId map (!_)
 	
 }

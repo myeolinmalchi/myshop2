@@ -1,5 +1,6 @@
 package models
 
+import common.conversion.OptionList
 import dto._
 import java.sql.Timestamp
 import javax.inject._
@@ -16,7 +17,7 @@ class CartModel @Inject() (val dbConfigProvider: DatabaseConfigProvider,
 						  (implicit ec: ExecutionContext)
 	extends HasDatabaseConfigProvider[JdbcProfile] {
 	
-	private def cartIdQuery(implicit cartId: Int) =  Carts.filter(_.cartId === cartId)
+	private def cartIdQuery(cartId: Int) =  Carts.filter(_.cartId === cartId)
 	
 	type D[T] = DBIOAction[T, NoStream, Effect.All]
 	
@@ -26,7 +27,7 @@ class CartModel @Inject() (val dbConfigProvider: DatabaseConfigProvider,
 	def getCartByCartId(cartId: Int): Future[Option[CartDto]] =
 		db run sql"SELECT * FROM v_carts WHERE cart_id = $cartId".as[CartDto].headOption
 	
-	def getItemIdsByCartId(implicit cartId: Int): Future[List[Int]] =
+	def getItemIdsByCartId(cartId: Int): Future[List[Int]] =
 		db run CartDetails.filter(_.cartId === cartId).map(_.optionItemId).result map(_.toList)
 	
 	private def getCartByCartIdQuery(implicit cartId: Int): D[Option[CartDto]] = {
@@ -92,32 +93,32 @@ class CartModel @Inject() (val dbConfigProvider: DatabaseConfigProvider,
 			orderId <- insertOrder(userId)
 			carts <- DBIO.sequence(cartIdList map (cid => getCartByCartIdQuery(cid)))
 			aff1 <- DBIO.sequenceOption(
-				sequence(carts) map { carts =>
+				OptionList.sequence(carts) map { carts =>
 					insertOrderProducts(orderId, carts)
 				}
 			)
 			aff2 <- DBIO.sequence(carts map updateStockWithValidation)
-			aff3 <- DBIO.sequence(cartIdList map(implicit id => cartIdQuery.delete))
-		} yield aff1.getOrElse(Nil).sum + sequence(aff2).getOrElse(Nil).sum + aff3.sum).transactionally
+			aff3 <- DBIO.sequence(cartIdList map(cartIdQuery(_).delete))
+		} yield aff1.getOrElse(Nil).sum + OptionList.sequence(aff2).getOrElse(Nil).sum + aff3.sum).transactionally
 		
 	def newOrder2(userId: String, cartIdList: List[Int]): Future[Option[Int]] =
 		db run (for {
 			orderId <- insertOrder(userId)
 			carts <- DBIO.sequence(cartIdList map (cid => getCartByCartIdQuery(cid)))
 			affOption1 <- DBIO.sequenceOption(
-				sequence(carts) map { carts =>
+				OptionList.sequence(carts) map { carts =>
 					insertOrderProducts(orderId, carts)
 				}
 			)
 			affOption2 <- DBIO.sequence(carts map updateStockWithValidation)
-			affOption3 <- DBIO.sequence(cartIdList map(implicit id => cartIdQuery.delete))
+			affOption3 <- DBIO.sequence(cartIdList map(cartIdQuery(_).delete))
 		} yield for {
 			aff1 <- affOption1
-			aff2 <- sequence(affOption2)
+			aff2 <- OptionList.sequence(affOption2)
 			aff3  = affOption3.sum
 		} yield aff1.sum + aff2.sum + aff3).transactionally
 		
-	def updateStockWithValidation(cart: Option[CartDto]): D[Option[Int]] = DBIO.sequenceOption(
+	private def updateStockWithValidation(cart: Option[CartDto]): D[Option[Int]] = DBIO.sequenceOption(
 		cart map { cart =>
 			(for {
 				checked <- productModel checkStockQuery(cart.itemList
@@ -132,17 +133,6 @@ class CartModel @Inject() (val dbConfigProvider: DatabaseConfigProvider,
 			}) flatten
 		}
 	)
-		
-	private def sequence[A](l: List[Option[A]]): Option[List[A]]= l match {
-		case Nil => Some(Nil)
-		case h :: t => h match {
-			case None => None
-			case Some(head) => sequence(t) match {
-				case None => None
-				case Some(list) => Some(head :: list)
-			}
-		}
-	}
 	
 	def insertCart(cart: CartRequestDto): Future[Int] = {
 		val query = Carts.map(c => (c.userId, c.productId, c.quantity)) returning Carts.map(_.cartId)
@@ -161,9 +151,9 @@ class CartModel @Inject() (val dbConfigProvider: DatabaseConfigProvider,
 	def deleteCart(implicit cartId: Int): Future[Int] =
 		db run Carts.filter(_.cartId === cartId).delete
 	
-	def updateQuantity(q: Int)(implicit cartId: Int): Future[Int] = q match {
+	def updateQuantity(q: Int, cartId: Int): Future[Int] = q match {
 		case quantity if quantity > 0 =>
-			db run cartIdQuery.map(_.quantity).update(quantity)
+			db run cartIdQuery(cartId).map(_.quantity).update(quantity)
 		case _ => Future.failed(new Exception("수량은 0보다 큰 값이어야 합니다."))
 	}
 	

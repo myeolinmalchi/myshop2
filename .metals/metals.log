@@ -8,3 +8,19 @@
 2022.04.01 13:57:52 INFO  time: initialize in 3.66s[0m
 2022.04.01 13:57:56 WARN  Build server is not auto-connectable.[0m
 2022.04.01 13:57:56 INFO  skipping build import with status 'Dismissed'[0m
+2022.04.17 20:49:06 INFO  tracing is disabled for protocol LSP, to enable tracing of incoming and outgoing JSON messages create an empty file at C:\Users\minsu\desktop\workspace\myshop\.metals\lsp.trace.json or C:\Users\minsu\AppData\Local\scalameta\metals\cache\lsp.trace.json[0m
+2022.04.17 20:49:07 INFO  logging to file C:\Users\minsu\Desktop\workspace\myshop\.metals\metals.log[0m
+2022.04.17 20:49:07 INFO  Started: Metals version 0.11.2 in workspace 'C:\Users\minsu\Desktop\workspace\myshop' for client coc.nvim 0.0.80.[0m
+2022.04.17 20:49:07 INFO  Parse release: 17.0.1[0m
+2022.04.17 20:49:11 INFO  time: initialize in 3.17s[0m
+2022.04.17 20:53:15 INFO  tracing is disabled for protocol LSP, to enable tracing of incoming and outgoing JSON messages create an empty file at C:\Users\minsu\desktop\workspace\myshop\.metals\lsp.trace.json or C:\Users\minsu\AppData\Local\scalameta\metals\cache\lsp.trace.json[0m
+2022.04.17 20:53:16 INFO  logging to file C:\Users\minsu\Desktop\workspace\myshop\.metals\metals.log[0m
+2022.04.17 20:53:16 INFO  Started: Metals version 0.11.2 in workspace 'C:\Users\minsu\Desktop\workspace\myshop' for client coc.nvim 0.0.80.[0m
+2022.04.17 20:53:16 INFO  Parse release: 17.0.1[0m
+2022.04.17 20:53:19 INFO  time: initialize in 2.89s[0m
+2022.04.17 20:53:23 WARN  Build server is not auto-connectable.[0m
+2022.04.17 20:53:24 INFO  skipping build import with status 'Dismissed'[0m
+2022.04.24 20:08:32 INFO  tracing is disabled for protocol LSP, to enable tracing of incoming and outgoing JSON messages create an empty file at C:\Users\minsu\desktop\workspace\myshop\.metals\lsp.trace.json or C:\Users\minsu\AppData\Local\scalameta\metals\cache\lsp.trace.json[0m
+2022.04.24 20:08:33 INFO  logging to file C:\Users\minsu\Desktop\workspace\myshop\.metals\metals.log[0m
+2022.04.24 20:08:33 INFO  Started: Metals version 0.11.2 in workspace 'C:\Users\minsu\Desktop\workspace\myshop' for client coc.nvim 0.0.80.[0m
+2022.04.24 20:08:33 INFO  Parse release: 17.0.1[0m

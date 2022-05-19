@@ -1,8 +1,8 @@
 package models
 
-import dto.{ReviewDto, ReviewImageDto, ReviewRequestDto}
+import dto.{ReviewDto, ReviewImageDto, ReviewRequestDto, ReviewResponseDto}
 import javax.inject.{Inject, Singleton}
-import models.Tables.{Products, ReviewImages, ReviewImagesRow, Reviews}
+import models.Tables.{OrderProductDetails, ProductOptionItems, Products, ReviewImages, ReviewImagesRow, Reviews}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
@@ -19,22 +19,78 @@ class ReviewModel @Inject() (val dbConfigProvider: DatabaseConfigProvider)
 				   (implicit f: T => R): DBIOAction[List[R], NoStream, Effect.All] =
 		DBIO.sequence(xs.map(f andThen g).toList)
 		
-	private def getReviews(f: Reviews => Rep[Boolean]): Future[List[ReviewDto]] =
-		db run (for {
-			reviews <- Reviews.filter(f).result
-			result <- toDto(reviews) { r: ReviewDto =>
+	private def getReviews(rs: DBIOAction[Seq[Reviews#TableElementType], NoStream, Effect.Read]): Future[List[ReviewResponseDto]] = db run {
+		for {
+			reviews <- rs
+			result <- toDto(reviews) { r: ReviewResponseDto =>
 				for {
-					images <- ReviewImages.filter(_.reviewId === r.reviewId).result
+					images <- ReviewImages
+						.filter(_.reviewId === r.reviewId)
+						.result
 					imageDtoList = images.map(ReviewImageDto.newInstance).toList
-				} yield r.setImages(imageDtoList)
+					details <- OrderProductDetails
+						.filter(_.orderProductId === r.orderProductId)
+						.result
+					optionItemOptions <- DBIO.sequence {
+						details.map { detail =>
+							ProductOptionItems
+								.filter(_.productOptionItemId === detail.optionItemId)
+								.result
+								.headOption
+						}.toList
+					}
+					optionItemName = optionItemOptions
+						.flatten
+						.map(_.name)
+						.reduce(_ + ", " + _)
+					productNameOption <- Products
+						.filter(_.productId === r.productId)
+						.map(_.name)
+						.result
+						.headOption
+					productName = productNameOption
+						.getOrElse(throw new NoSuchElementException)
+				} yield r
+					.setName(s"$productName($optionItemName)")
+					.setImages(imageDtoList)
 			}
-		} yield result)
+		} yield result
+	}
 	
-	def getReviewsByProductId(productId: Int): Future[List[ReviewDto]] =
-		getReviews(_.productId === productId)
+	def getReviewsByProductId(productId: Int): Future[List[ReviewResponseDto]] =
+		getReviews(Reviews.filter(_.productId === productId).result)
 		
-	def getReviewsByUserId(userId: String): Future[List[ReviewDto]] =
-		getReviews(_.userId === userId)
+	def getReviewsByUserId(userId: String): Future[List[ReviewResponseDto]] =
+		getReviews(Reviews.filter(_.userId === userId).result)
+		
+	def getReviewsByProductIdWithPagination(productId: Int,
+																					size: Int,
+																					page: Int): Future[List[ReviewResponseDto]] =
+		getReviews (
+			Reviews
+				.filter(_.productId === productId)
+				.drop((page-1)*size)
+				.take(size)
+				.result
+		)
+		
+	def getReviewsByUserIdWithPagination(userId: String,
+																			 size: Int,
+																			 page: Int): Future[List[ReviewResponseDto]] =
+		getReviews (
+			Reviews
+				.filter(_.userId === userId)
+				.drop((page-1)*size)
+				.take(size)
+				.result
+		)
+		
+	def getReviewCountByProductId(productId: Int): Future[Int] =
+		db run Reviews.filter(_.productId === productId).size.result
+		
+	def getReviewCountByUserId(userId: String): Future[Int] =
+		db run Reviews.filter(_.userId === userId).size.result
+	
 		
 	def insertReview(review: ReviewRequestDto): Future[Int] = {
 		val reviewQuery = Reviews.map(r => (r.productId, r.userId, r.rating, r.title, r.content)) returning Reviews.map(_.reviewId)

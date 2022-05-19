@@ -1,6 +1,6 @@
 package controllers.user
 
-import dto.{UserDto, UserRequestDto}
+import dto.UserDto
 import java.time.LocalDateTime
 import models.{NonUserModel, UserSessionModel}
 import play.api.mvc.Results.Redirect
@@ -13,18 +13,20 @@ object CommonApi {
 	implicit val defaultPage: Call = controllers.user.routes.IndexController.index
 	
 	case class WithUser(block: UserDto => Future[Result])
-					   (implicit request: Request[AnyContent],
-						ec: ExecutionContext, service: user.AccountService){
+										 (implicit request: Request[AnyContent],
+											ec: ExecutionContext, service: user.AccountService) {
 		
 		def extractUser(req: RequestHeader): Future[Option[UserDto]] = {
 			val sessionTokenOpt = req.session.get("sessionToken")
+			
 			def swap[M](x: Option[Future[M]]): Future[Option[M]] =
 				Future.sequence(Option.option2Iterable(x)).map(_.headOption)
-			swap (sessionTokenOpt
-					.flatMap(token => UserSessionModel.getSession(token))
-					.filter(_.expiration.isAfter(LocalDateTime.now()))
-					.map(_.userId)
-					.map(service.getUser(_).value.map(_.get)))
+			
+			swap(sessionTokenOpt
+				.flatMap(token => UserSessionModel.getSession(token))
+				.filter(_.expiration.isAfter(LocalDateTime.now()))
+				.map(_.userId)
+				.map(service.getUser(_).value.map(_.get)))
 		}
 		
 		def ifNot(result: => Future[Result]): Future[Result] =
@@ -43,8 +45,8 @@ object CommonApi {
 			extractUser(request) flatMap {
 				case Some(user) => block(user)
 				case None => Future(Redirect(controllers.user.routes.AccountController.loginPage)
-						.flashing("error" -> "로그인이 필요합니다.")
-						.withSession(request.session - "sessionToken"))
+					.flashing("error" -> "로그인이 필요합니다.")
+					.withSession(request.session - "sessionToken"))
 			}
 	}
 	
@@ -52,33 +54,35 @@ object CommonApi {
 	// withUser 메서드와 함께 사용한다.
 	// 쿠키는 일주일(604800초)동안 유지된다.
 	def withNonUserToken(f: String => Future[Result])
-						(implicit request: Request[AnyContent], ec: ExecutionContext): Future[Result] =
+											(implicit request: Request[AnyContent], ec: ExecutionContext): Future[Result] =
 		request.cookies.get("idToken") match {
 			case Some(idToken) => f(idToken.value)
 			case None =>
 				val token = NonUserModel.generateToken
-				f(token) map(_.withCookies(
+				f(token) map (_.withCookies(
 					new Cookie("idToken", token, Some(604800), httpOnly = false)))
 		}
 	
 	def withUser(block: UserDto => Future[Result])
-				(implicit request: Request[AnyContent],
-				 ec: ExecutionContext, service: user.AccountService): WithUser = WithUser(block)
+							(implicit request: Request[AnyContent],
+							 ec: ExecutionContext, service: user.AccountService): WithUser = WithUser(block)
 	
 	def withoutUser(block: Unit => Future[Result])
-				   (implicit request: Request[AnyContent],
-					ec: ExecutionContext, service: user.AccountService): Future[Result] =
+								 (implicit request: Request[AnyContent],
+									ec: ExecutionContext, service: user.AccountService): Future[Result] =
 		WithUser {
-			_ => Future(Redirect(defaultPage)
+			_ =>
+				Future(Redirect(defaultPage)
 					.flashing("error" -> "이미 로그인 중입니다."))
 		} onlyForWithout block()
 	
 	
 	def withoutUser(block: Future[Result])
-				   (implicit request: Request[AnyContent],
-					ec: ExecutionContext, service: user.AccountService): Future[Result] =
+								 (implicit request: Request[AnyContent],
+									ec: ExecutionContext, service: user.AccountService): Future[Result] =
 		WithUser {
-			_ => Future(Redirect(defaultPage)
+			_ =>
+				Future(Redirect(defaultPage)
 					.flashing("error" -> "이미 로그인 중입니다."))
 		} onlyForWithout block
 	

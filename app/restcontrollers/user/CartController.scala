@@ -1,5 +1,8 @@
 package restcontrollers.user
 
+import common.validation.CartValidationLib
+import common.validation.CartValidationLib._
+import common.validation.ValidationResultLib.ValidationFailure
 import controllers.Common.CustomFuture
 import dto.CartRequestDto
 import javax.inject.{Inject, Singleton}
@@ -9,24 +12,24 @@ import restcontrollers.Common._
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 import services.NonUserService
-import services.user.CartService.{IncorrectProductId, OutOfStock}
 import services.user._
 
 @Singleton
 class CartController @Inject()(cc: ControllerComponents)
-							  (implicit ec: ExecutionContext,
-							   accountService: AccountService,
-							   cartService: CartService,
-							   orderService: OrderService,
-							   authService: AuthService,
-							   nonUserService: NonUserService)
-		extends AbstractController(cc) {
+															(implicit ec: ExecutionContext,
+															 accountService: AccountService,
+															 cartService: CartService,
+															 orderService: OrderService,
+															 authService: AuthService,
+															 nonUserService: NonUserService,
+															 nonUserCartService: services.nonuser.CartService)
+	extends AbstractController(cc) with CartValidationLib{
 	
-	import authService.withUserAuth
+	import authService._
 	import cartService.checkOwnCart
 	
 	def getCart(userId: String, cartId: Int): Action[AnyContent] = Action.async { implicit request =>
-		withUserAuth(userId) { _ =>
+		withUser(userId) { _ =>
 			checkOwnCart(userId, cartId) {
 				cartService.getCart(cartId) map {
 					case Some(cart) => Ok(Json.toJson(cart))
@@ -37,30 +40,36 @@ class CartController @Inject()(cc: ControllerComponents)
 	}
 	
 	def getCarts(userId: String): Action[AnyContent] = Action.async { implicit request =>
-		withUserAuth(userId) { implicit user =>
+		withUser(userId) { implicit user =>
 			cartService.getCarts(userId) getOrError
 		}
 	}
 	
 	def addCart(userId: String): Action[AnyContent] = Action.async { implicit request =>
-		withUserAuth(userId) { _ =>
-			withJson[CartRequestDto] { implicit cart =>
-				cartService.addCart map {
-					case Right(_) => Created // 201
-					case Left(IncorrectProductId) => Conflict // 409
-					case Left(failure: OutOfStock) =>
-						Forbidden(Json.toJson(Map("stock" -> failure.stock))) // 403
-				} recover {
-					case _: NoSuchElementException => Conflict // 409
-					case ex: Exception =>
-						BadRequest(Json.toJson(Map("error" -> ex.getMessage))) // 400
+		withJson[CartRequestDto] { cart =>
+			withUserAndValidation(userId) (
+				authSuccess = cartService addCart cart,
+				authFailure = nonUserCartService addCart cart.setUserId(_),
+				result = { validationResult: Either[ValidationFailure, Int] =>
+					validationResult match {
+						case Right(_) => Created // 201
+						case Left(IncorrectProductId) => Conflict // 409
+						case Left(OutOfStock(stock)) =>
+							Forbidden(Json.toJson(Map("stock" -> stock))) // 403
+						case Left(IncorrectItemSize(size)) => // 400
+							BadRequest(Json.obj(
+								"error" ->
+									s"옵션 항목의 개수가 일치하지 않습니다.(옵션 수: ${size}개)"
+							))
+						case Left(ProductNotExists) => NotFound
+					}
 				}
-			}
+			)
 		}
 	}
 	
 	def deleteCart(userId: String, cartId: Int): Action[AnyContent] = Action.async { implicit request =>
-		withUserAuth(userId) { _ =>
+		withUser(userId) { _ =>
 			checkOwnCart(userId, cartId) {
 				cartService.deleteCart(cartId) trueOrError
 			}
@@ -68,7 +77,7 @@ class CartController @Inject()(cc: ControllerComponents)
 	}
 	
 	def updateQuantity(userId: String, cartId: Int): Action[AnyContent] = Action.async { implicit request =>
-		withUserAuth(userId) { _ =>
+		withUser(userId) { _ =>
 			checkOwnCart(userId, cartId) {
 				withAnyJson { value =>
 					val quantity = (value \ "quantity").as[Int]

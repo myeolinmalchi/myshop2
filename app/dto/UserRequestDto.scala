@@ -1,8 +1,5 @@
 package dto
 
-import common.encryption.SHA256
-import java.sql.Timestamp
-import models.Tables
 import models.Tables._
 import play.api.libs.json.{Json, Reads, Writes}
 import scala.collection.mutable.Map

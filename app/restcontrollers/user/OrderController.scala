@@ -16,10 +16,10 @@ class OrderController @Inject()(cc: ControllerComponents)
 								orderService: OrderService)
 		 extends AbstractController(cc) {
 	
-	import authService.withUserAuth
+	import authService.withUser
 	
 	def createOrder(userId: String): Action[AnyContent] = Action.async { implicit request  =>
-		withUserAuth(userId) { _ =>
+		withUser(userId) { _ =>
 			withAnyJson { value =>
 				val cartIdList = (value \ "cartIdList").as[List[Int]]
 				orderService.newOrder(userId, cartIdList) trueOrError
@@ -28,13 +28,13 @@ class OrderController @Inject()(cc: ControllerComponents)
 	}
 	
 	def getOrders(userId: String): Action[AnyContent] =Action.async { implicit request =>
-		withUserAuth(userId) { _ =>
+		withUser(userId) { _ =>
 			orderService.getOrderByUserId(userId) getOrError
 		}
 	}
 	
 	def checkUserOrdered(userId: String, productId: Int): Action[AnyContent] = Action.async { implicit request =>
-		withUserAuth(userId) { _ =>
+		withUser(userId) { _ =>
 			orderService.checkUserOrderedThisProduct(userId, productId) trueOrError
 		}
 	}

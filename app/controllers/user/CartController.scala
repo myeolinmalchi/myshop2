@@ -8,20 +8,20 @@ import javax.inject.{Inject, Singleton}
 import play.api.mvc._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
-import services.user._
 import services.NonUserService
+import services.user._
 
 @Singleton
 class CartController @Inject()(cc: ControllerComponents)
-							  (implicit ec: ExecutionContext,
-							   accountService: AccountService,
-							   cartService: CartService,
-							   orderService: OrderService,
-							   nonUserService: NonUserService)
-		extends AbstractController(cc) {
+															(implicit ec: ExecutionContext,
+															 accountService: AccountService,
+															 cartService: CartService,
+															 orderService: OrderService,
+															 nonUserService: NonUserService)
+	extends AbstractController(cc) {
 	
 	implicit class CartFuture(c: Future[List[CartDto]])
-								  (implicit request: Request[AnyContent]){
+													 (implicit request: Request[AnyContent]) {
 		def cartOrError: Future[Result] = c map { result =>
 			Ok(views.html.cart_list(result))
 		} recover {
@@ -40,7 +40,7 @@ class CartController @Inject()(cc: ControllerComponents)
 	def addCart(): Action[AnyContent] = Action.async { implicit request =>
 		withJsonDto[CartRequestDto] { implicit cart =>
 			withUser { _ =>
-				cartService.addCart trueOrError
+				cartService.addCart(cart) trueOrError
 			} ifNot withNonUserToken { _ =>
 				nonUserService.addCart(cart) trueOrError
 			}
@@ -65,7 +65,7 @@ class CartController @Inject()(cc: ControllerComponents)
 			withUser { _ =>
 				cartService.updateQuantity(cartId, quantity) trueOrError
 			} ifNot withNonUserToken { _ =>
-				nonUserService.updateQuantity(quantity)(cartId) trueOrError
+				nonUserService.updateQuantity(quantity, cartId) trueOrError
 			}
 		}
 	}

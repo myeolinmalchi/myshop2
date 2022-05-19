@@ -45,10 +45,27 @@ class SearchController @Inject()(cc: ControllerComponents,
 		}
 	}
 	
-	def getReviews(productId: Int): Action[AnyContent] = Action.async { implicit request =>
-		communicateService getReviewsByProductId productId map { reviews =>
-			Ok(Json.toJson(reviews))
-		} recover {
+	def getReviews(productId: Int,
+								 size: Option[Int],
+								 page: Option[Int]): Action[AnyContent] = Action.async { implicit request =>
+		val pageVal = page.getOrElse(1)
+		val sizeVal = size.getOrElse(5)
+		(for {
+			reviews <- communicateService
+				.getReviewsByProductIdWithPagination(
+					productId = productId,
+					size = sizeVal,
+					page = pageVal
+				)
+			reviewCount <- communicateService.getReviewCountsByProductId(productId)
+		} yield Ok {
+			Json.obj (
+				"page" -> pageVal,
+				"size" -> sizeVal,
+				"pageCount" -> (reviewCount / sizeVal + 1),
+				"reviews" -> Json.toJson(reviews)
+			)
+		}) recover {
 			case _: NoSuchElementException => NotFound
 			case _: Exception => BadRequest
 		}

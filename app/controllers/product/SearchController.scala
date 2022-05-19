@@ -1,14 +1,13 @@
 package controllers.product
 
-import javax.inject._
-import play.api.libs.json._
-import play.api.mvc._
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
-import services.ProductService
-import scala.language.postfixOps
 import common.json.CustomJsonApi._
 import controllers.Common._
+import javax.inject._
+import play.api.mvc._
+import scala.concurrent.ExecutionContext
+import scala.language.postfixOps
+import services.ProductService
+import services.product.CommunicateService
 
 /**
  * This controller creates an `Action` to handle HTTP requests to the
@@ -16,22 +15,23 @@ import controllers.Common._
  */
 @Singleton
 class SearchController @Inject()(cc: ControllerComponents,
-								 productService: ProductService)
-								(implicit ec: ExecutionContext)
-		extends AbstractController(cc) {
+																 productService: ProductService,
+																 communicateService: CommunicateService)
+																(implicit ec: ExecutionContext)
+	extends AbstractController(cc) {
 	
 	def search(code: String,
-			   keyword: String,
-			   page: Option[Int],
-			   size: Option[Int],
-			   seq: Option[Int]): Action[AnyContent] = Action.async { implicit request =>
-		val codeVal = if(code.equals("0")) "" else code
+						 keyword: String,
+						 page: Option[Int],
+						 size: Option[Int],
+						 seq: Option[Int]): Action[AnyContent] = Action.async { implicit request =>
+		val codeVal = if (code.equals("0")) "" else code
 		val (pageVal, sizeVal, seqVal) = (page.getOrElse(1), size.getOrElse(48), seq.getOrElse(0))
 		(for {
 			productCount <- productService getProductCount(keyword, codeVal)
 			products <- productService searchProductsBy(keyword, codeVal, seqVal, pageVal, sizeVal)
-		} yield Ok(views.html.search(products, productCount/sizeVal, pageVal))) recover {
-			case ex:Exception => ex toJsonError
+		} yield Ok(views.html.search(products, productCount / sizeVal, pageVal))) recover {
+			case ex: Exception => ex toJsonError
 		}
 	}
 	
@@ -47,7 +47,8 @@ class SearchController @Inject()(cc: ControllerComponents,
 			val depth = (value \ "depth").as[Int]
 			val parentId = (value \ "parentId").as[Int]
 			(productService getProductOptionStock(productId, depth, parentId))
-					.map (_.filter(_.stock > 0)).getOrError
+				.map(_.filter(_.stock > 0)).getOrError
 		}
 	}
+	
 }
