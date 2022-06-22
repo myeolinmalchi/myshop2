@@ -82,12 +82,21 @@ class ProductModel @Inject()(val dbConfigProvider: DatabaseConfigProvider)
 				} yield p.setOptions(optionDtoList)
 			}
 		} yield productDtoList)
-	
-	def getProductsSortBy(page: Int, n: Int, h: Products => slick.lifted.ColumnOrdered[_])
-											 (implicit f: Products => Rep[Boolean]): Future[List[ProductDto]] =
-		db run (for {
-			products <- getProductsWithFilterQuery(f).sortBy(h).drop((page - 1) * n).take(n).result
-			productDtoList <- toDto(products) { p: ProductDto =>
+		
+	def searchProductsOrderBy(keyword: String,
+														category: String,
+														page: Int,
+														size: Int,
+														orderBy: String): Future[List[ProductDto]] = db run {
+		for {
+			products <- sql"""
+				SELECT * FROM v_products
+				WHERE name LIKE '%#$keyword%' AND category_code LIKE '%#$category%'
+				ORDER BY $orderBy
+				LIMIT $size
+				OFFSET ${(page-1)*size}
+			""".as[ProductDto]
+			result <- DBIOAction.sequence(products.toList map { p =>
 				for {
 					options <- getOptionsByProductIdQuery(p.productId).result
 					optionDtoList <- toDto(options) { o: ProductOptionDto =>
@@ -97,8 +106,11 @@ class ProductModel @Inject()(val dbConfigProvider: DatabaseConfigProvider)
 						} yield o.setItems(itemDtoList)
 					}
 				} yield p.setOptions(optionDtoList)
-			}
-		} yield productDtoList)
+			})
+		} yield result
+	}
+	
+	
 	
 	def checkProductExists(productId: Int): Future[Boolean] =
 		db run {
@@ -124,10 +136,10 @@ class ProductModel @Inject()(val dbConfigProvider: DatabaseConfigProvider)
 	
 	def getProductByIdQuery(productId: Int): DBIOAction[Option[ProductDto], NoStream, Effect.All] =
 		for {
-			productOption <- getProductsWithFilterQuery(_.productId === productId).result.headOption
+			productOption <-
+				sql"SELECT * FROM v_products WHERE product_id = ${productId}".as[ProductDto].headOption
 			options <- getOptionsByProductIdQuery(productId).result
 			images <- getImagesByProductIdQuery(productId).result
-			productDtoOption = productOption.map(ProductDto.newInstance)
 			optionDtoList <- toDto(options) { o: ProductOptionDto =>
 				for {
 					items <- getItemsByOptionIdQuery(o.productOptionId).result
@@ -135,7 +147,7 @@ class ProductModel @Inject()(val dbConfigProvider: DatabaseConfigProvider)
 				} yield o.setItems(itemDtoList)
 			}
 			imageDtoList <- toDto(images) { i: ProductImageDto => DBIO.successful(i) }
-		} yield productDtoOption map { productDto =>
+		} yield productOption map { productDto =>
 			productDto
 				.setOptions(optionDtoList)
 				.setImages(imageDtoList)

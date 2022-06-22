@@ -79,7 +79,7 @@ trait Tables {
     /** Foreign key referencing Products (database name carts_ibfk_2) */
     lazy val productsFk = foreignKey("carts_ibfk_2", productId, Products)(r => r.productId, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Restrict)
     /** Foreign key referencing Users (database name carts_ibfk_1) */
-    lazy val usersFk = foreignKey("carts_ibfk_1", userId, Users)(r => r.userId, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Restrict)
+    lazy val usersFk = foreignKey("carts_ibfk_1", userId, Users)(r => r.userId, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
   }
   /** Collection-like TableQuery object for table Carts */
   lazy val Carts = new TableQuery(tag => new Carts(tag))
@@ -154,33 +154,27 @@ trait Tables {
   /** Entity class storing rows of table NonUserCarts
    *  @param idToken Database column id_token SqlType(VARCHAR), Length(100,true)
    *  @param nonUserCartId Database column non_user_cart_id SqlType(INT), AutoInc, PrimaryKey
-   *  @param name Database column name SqlType(VARCHAR), Length(100,true)
    *  @param productId Database column product_id SqlType(INT)
-   *  @param price Database column price SqlType(INT)
    *  @param quantity Database column quantity SqlType(INT)
    *  @param addedDate Database column added_date SqlType(DATETIME) */
-  case class NonUserCartsRow(idToken: String, nonUserCartId: Int, name: String, productId: Int, price: Int, quantity: Int, addedDate: java.sql.Timestamp)
+  case class NonUserCartsRow(idToken: String, nonUserCartId: Int, productId: Int, quantity: Int, addedDate: java.sql.Timestamp)
   /** GetResult implicit for fetching NonUserCartsRow objects using plain SQL queries */
   implicit def GetResultNonUserCartsRow(implicit e0: GR[String], e1: GR[Int], e2: GR[java.sql.Timestamp]): GR[NonUserCartsRow] = GR{
     prs => import prs._
-    NonUserCartsRow.tupled((<<[String], <<[Int], <<[String], <<[Int], <<[Int], <<[Int], <<[java.sql.Timestamp]))
+    NonUserCartsRow.tupled((<<[String], <<[Int], <<[Int], <<[Int], <<[java.sql.Timestamp]))
   }
   /** Table description of table non_user_carts. Objects of this class serve as prototypes for rows in queries. */
   class NonUserCarts(_tableTag: Tag) extends profile.api.Table[NonUserCartsRow](_tableTag, Some("myshop2"), "non_user_carts") {
-    def * = (idToken, nonUserCartId, name, productId, price, quantity, addedDate) <> (NonUserCartsRow.tupled, NonUserCartsRow.unapply)
+    def * = (idToken, nonUserCartId, productId, quantity, addedDate) <> (NonUserCartsRow.tupled, NonUserCartsRow.unapply)
     /** Maps whole row to an option. Useful for outer joins. */
-    def ? = ((Rep.Some(idToken), Rep.Some(nonUserCartId), Rep.Some(name), Rep.Some(productId), Rep.Some(price), Rep.Some(quantity), Rep.Some(addedDate))).shaped.<>({r=>import r._; _1.map(_=> NonUserCartsRow.tupled((_1.get, _2.get, _3.get, _4.get, _5.get, _6.get, _7.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+    def ? = ((Rep.Some(idToken), Rep.Some(nonUserCartId), Rep.Some(productId), Rep.Some(quantity), Rep.Some(addedDate))).shaped.<>({r=>import r._; _1.map(_=> NonUserCartsRow.tupled((_1.get, _2.get, _3.get, _4.get, _5.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
 
     /** Database column id_token SqlType(VARCHAR), Length(100,true) */
     val idToken: Rep[String] = column[String]("id_token", O.Length(100,varying=true))
     /** Database column non_user_cart_id SqlType(INT), AutoInc, PrimaryKey */
     val nonUserCartId: Rep[Int] = column[Int]("non_user_cart_id", O.AutoInc, O.PrimaryKey)
-    /** Database column name SqlType(VARCHAR), Length(100,true) */
-    val name: Rep[String] = column[String]("name", O.Length(100,varying=true))
     /** Database column product_id SqlType(INT) */
     val productId: Rep[Int] = column[Int]("product_id")
-    /** Database column price SqlType(INT) */
-    val price: Rep[Int] = column[Int]("price")
     /** Database column quantity SqlType(INT) */
     val quantity: Rep[Int] = column[Int]("quantity")
     /** Database column added_date SqlType(DATETIME) */
@@ -295,7 +289,7 @@ trait Tables {
     val orderDate: Rep[java.sql.Timestamp] = column[java.sql.Timestamp]("order_date")
 
     /** Foreign key referencing Users (database name FK__users) */
-    lazy val usersFk = foreignKey("FK__users", userId, Users)(r => r.userId, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Restrict)
+    lazy val usersFk = foreignKey("FK__users", userId, Users)(r => r.userId, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
   }
   /** Collection-like TableQuery object for table Orders */
   lazy val Orders = new TableQuery(tag => new Orders(tag))
@@ -490,45 +484,51 @@ trait Tables {
   lazy val ProductStock = new TableQuery(tag => new ProductStock(tag))
 
   /** Entity class storing rows of table Qnas
-   *  @param productId Database column product_id SqlType(INT), Default(None)
+   *  @param productId Database column product_id SqlType(INT)
    *  @param qnaId Database column qna_id SqlType(INT), AutoInc, PrimaryKey
-   *  @param userId Database column user_id SqlType(VARCHAR), Length(20,true), Default(None)
-   *  @param question Database column question SqlType(VARCHAR), Length(500,true), Default(None)
-   *  @param answer Database column answer SqlType(VARCHAR), Length(500,true), Default(None) */
-  case class QnasRow(productId: Option[Int] = None, qnaId: Int, userId: Option[String] = None, question: Option[String] = None, answer: Option[String] = None)
+   *  @param userId Database column user_id SqlType(VARCHAR), Length(20,true)
+   *  @param question Database column question SqlType(VARCHAR), Length(500,true)
+   *  @param answer Database column answer SqlType(VARCHAR), Length(500,true), Default(None)
+   *  @param questionDate Database column question_date SqlType(TIMESTAMP)
+   *  @param answerDate Database column answer_date SqlType(TIMESTAMP), Default(None) */
+  case class QnasRow(productId: Int, qnaId: Int, userId: String, question: String, answer: Option[String] = None, questionDate: java.sql.Timestamp, answerDate: Option[java.sql.Timestamp] = None)
   /** GetResult implicit for fetching QnasRow objects using plain SQL queries */
-  implicit def GetResultQnasRow(implicit e0: GR[Option[Int]], e1: GR[Int], e2: GR[Option[String]]): GR[QnasRow] = GR{
+  implicit def GetResultQnasRow(implicit e0: GR[Int], e1: GR[String], e2: GR[Option[String]], e3: GR[java.sql.Timestamp], e4: GR[Option[java.sql.Timestamp]]): GR[QnasRow] = GR{
     prs => import prs._
-    QnasRow.tupled((<<?[Int], <<[Int], <<?[String], <<?[String], <<?[String]))
+    QnasRow.tupled((<<[Int], <<[Int], <<[String], <<[String], <<?[String], <<[java.sql.Timestamp], <<?[java.sql.Timestamp]))
   }
   /** Table description of table qnas. Objects of this class serve as prototypes for rows in queries. */
   class Qnas(_tableTag: Tag) extends profile.api.Table[QnasRow](_tableTag, Some("myshop2"), "qnas") {
-    def * = (productId, qnaId, userId, question, answer) <> (QnasRow.tupled, QnasRow.unapply)
+    def * = (productId, qnaId, userId, question, answer, questionDate, answerDate) <> (QnasRow.tupled, QnasRow.unapply)
     /** Maps whole row to an option. Useful for outer joins. */
-    def ? = ((productId, Rep.Some(qnaId), userId, question, answer)).shaped.<>({r=>import r._; _2.map(_=> QnasRow.tupled((_1, _2.get, _3, _4, _5)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+    def ? = ((Rep.Some(productId), Rep.Some(qnaId), Rep.Some(userId), Rep.Some(question), answer, Rep.Some(questionDate), answerDate)).shaped.<>({r=>import r._; _1.map(_=> QnasRow.tupled((_1.get, _2.get, _3.get, _4.get, _5, _6.get, _7)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
 
-    /** Database column product_id SqlType(INT), Default(None) */
-    val productId: Rep[Option[Int]] = column[Option[Int]]("product_id", O.Default(None))
+    /** Database column product_id SqlType(INT) */
+    val productId: Rep[Int] = column[Int]("product_id")
     /** Database column qna_id SqlType(INT), AutoInc, PrimaryKey */
     val qnaId: Rep[Int] = column[Int]("qna_id", O.AutoInc, O.PrimaryKey)
-    /** Database column user_id SqlType(VARCHAR), Length(20,true), Default(None) */
-    val userId: Rep[Option[String]] = column[Option[String]]("user_id", O.Length(20,varying=true), O.Default(None))
-    /** Database column question SqlType(VARCHAR), Length(500,true), Default(None) */
-    val question: Rep[Option[String]] = column[Option[String]]("question", O.Length(500,varying=true), O.Default(None))
+    /** Database column user_id SqlType(VARCHAR), Length(20,true) */
+    val userId: Rep[String] = column[String]("user_id", O.Length(20,varying=true))
+    /** Database column question SqlType(VARCHAR), Length(500,true) */
+    val question: Rep[String] = column[String]("question", O.Length(500,varying=true))
     /** Database column answer SqlType(VARCHAR), Length(500,true), Default(None) */
     val answer: Rep[Option[String]] = column[Option[String]]("answer", O.Length(500,varying=true), O.Default(None))
+    /** Database column question_date SqlType(TIMESTAMP) */
+    val questionDate: Rep[java.sql.Timestamp] = column[java.sql.Timestamp]("question_date")
+    /** Database column answer_date SqlType(TIMESTAMP), Default(None) */
+    val answerDate: Rep[Option[java.sql.Timestamp]] = column[Option[java.sql.Timestamp]]("answer_date", O.Default(None))
 
     /** Foreign key referencing Products (database name qnas_ibfk_2) */
-    lazy val productsFk = foreignKey("qnas_ibfk_2", productId, Products)(r => Rep.Some(r.productId), onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Restrict)
+    lazy val productsFk = foreignKey("qnas_ibfk_2", productId, Products)(r => r.productId, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
     /** Foreign key referencing Users (database name qnas_ibfk_1) */
-    lazy val usersFk = foreignKey("qnas_ibfk_1", userId, Users)(r => Rep.Some(r.userId), onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Restrict)
+    lazy val usersFk = foreignKey("qnas_ibfk_1", userId, Users)(r => r.userId, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
   }
   /** Collection-like TableQuery object for table Qnas */
   lazy val Qnas = new TableQuery(tag => new Qnas(tag))
 
   /** Entity class storing rows of table ReviewImages
    *  @param reviewId Database column review_id SqlType(INT)
-   *  @param reviewImageId Database column review_image_id SqlType(INT), PrimaryKey
+   *  @param reviewImageId Database column review_image_id SqlType(INT), AutoInc, PrimaryKey
    *  @param image Database column image SqlType(LONGTEXT), Length(2147483647,true)
    *  @param sequence Database column sequence SqlType(INT) */
   case class ReviewImagesRow(reviewId: Int, reviewImageId: Int, image: String, sequence: Int)
@@ -545,8 +545,8 @@ trait Tables {
 
     /** Database column review_id SqlType(INT) */
     val reviewId: Rep[Int] = column[Int]("review_id")
-    /** Database column review_image_id SqlType(INT), PrimaryKey */
-    val reviewImageId: Rep[Int] = column[Int]("review_image_id", O.PrimaryKey)
+    /** Database column review_image_id SqlType(INT), AutoInc, PrimaryKey */
+    val reviewImageId: Rep[Int] = column[Int]("review_image_id", O.AutoInc, O.PrimaryKey)
     /** Database column image SqlType(LONGTEXT), Length(2147483647,true) */
     val image: Rep[String] = column[String]("image", O.Length(2147483647,varying=true))
     /** Database column sequence SqlType(INT) */
@@ -648,7 +648,7 @@ trait Tables {
   lazy val Sellers = new TableQuery(tag => new Sellers(tag))
 
   /** Entity class storing rows of table UserAddresses
-   *  @param userId Database column user_id SqlType(VARCHAR), Length(20,true)
+   *  @param userId Database column user_id SqlType(VARCHAR), Length(100,true)
    *  @param addressId Database column address_id SqlType(INT), AutoInc, PrimaryKey
    *  @param priority Database column priority SqlType(SMALLINT)
    *  @param address Database column address SqlType(VARCHAR), Length(200,true)
@@ -666,8 +666,8 @@ trait Tables {
     /** Maps whole row to an option. Useful for outer joins. */
     def ? = ((Rep.Some(userId), Rep.Some(addressId), Rep.Some(priority), Rep.Some(address), Rep.Some(addressDetail), Rep.Some(zipcode))).shaped.<>({r=>import r._; _1.map(_=> UserAddressesRow.tupled((_1.get, _2.get, _3.get, _4.get, _5.get, _6.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
 
-    /** Database column user_id SqlType(VARCHAR), Length(20,true) */
-    val userId: Rep[String] = column[String]("user_id", O.Length(20,varying=true))
+    /** Database column user_id SqlType(VARCHAR), Length(100,true) */
+    val userId: Rep[String] = column[String]("user_id", O.Length(100,varying=true))
     /** Database column address_id SqlType(INT), AutoInc, PrimaryKey */
     val addressId: Rep[Int] = column[Int]("address_id", O.AutoInc, O.PrimaryKey)
     /** Database column priority SqlType(SMALLINT) */
@@ -679,11 +679,10 @@ trait Tables {
     /** Database column zipcode SqlType(SMALLINT) */
     val zipcode: Rep[Int] = column[Int]("zipcode")
 
-    /** Foreign key referencing Users (database name user_addresses_ibfk_1) */
-    lazy val usersFk = foreignKey("user_addresses_ibfk_1", userId, Users)(r => r.userId, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
-
     /** Uniqueness Index over (address,addressDetail) (database name address) */
     val index1 = index("address", (address, addressDetail), unique=true)
+    /** Index over (userId) (database name user_addresses_ibfk_1) */
+    val index2 = index("user_addresses_ibfk_1", userId)
   }
   /** Collection-like TableQuery object for table UserAddresses */
   lazy val UserAddresses = new TableQuery(tag => new UserAddresses(tag))

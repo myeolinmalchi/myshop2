@@ -51,6 +51,7 @@ case class ReviewRequestDto(productId: Int,
 														comment: Option[String],
 														reviewDate: Option[Date],
 														recommend: Option[Int],
+														orderProductId: Int,
 														images: List[String] = Nil) {
 	
 }
@@ -98,4 +99,8 @@ object ReviewResponseDto {
 			r.recommend,
 			r.orderProductId
 		)
+}
+
+object ReviewRequestDto {
+	implicit val reviewRequestRead = Json.reads[ReviewRequestDto]
 }

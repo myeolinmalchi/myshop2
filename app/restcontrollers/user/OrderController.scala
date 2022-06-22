@@ -10,24 +10,26 @@ import services.user.{AccountService, AuthService, OrderService}
 
 @Singleton
 class OrderController @Inject()(cc: ControllerComponents)
-							   (implicit ec: ExecutionContext,
-								accountService: AccountService,
-								authService: AuthService,
-								orderService: OrderService)
-		 extends AbstractController(cc) {
+															 (implicit ec: ExecutionContext,
+																accountService: AccountService,
+																authService: AuthService,
+																orderService: OrderService)
+	extends AbstractController(cc) {
 	
 	import authService.withUser
 	
-	def createOrder(userId: String): Action[AnyContent] = Action.async { implicit request  =>
+	def createOrder(userId: String): Action[AnyContent] = Action.async { implicit request =>
 		withUser(userId) { _ =>
 			withAnyJson { value =>
 				val cartIdList = (value \ "cartIdList").as[List[Int]]
-				orderService.newOrder(userId, cartIdList) trueOrError
+				orderService.newOrder(userId, cartIdList) map (_ => Ok) recover {
+					case ex: Exception => BadRequest(ex.getMessage)
+				}
 			}
 		}
 	}
 	
-	def getOrders(userId: String): Action[AnyContent] =Action.async { implicit request =>
+	def getOrders(userId: String): Action[AnyContent] = Action.async { implicit request =>
 		withUser(userId) { _ =>
 			orderService.getOrderByUserId(userId) getOrError
 		}

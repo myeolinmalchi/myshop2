@@ -17,5 +17,7 @@ trait AccountService extends ValidationResultLib[Future]{
 	def getUserByEmail(email: String): OptionT[Future, UserDto]
 	def getUserInfoByKakaoAccessToken(accessToken: String): Future[(String, String)]
 	def userIdExist(userId: String): Future[Boolean]
+	def updateUserPw(userPw: String): Future[Int]
+	def updateName(name: String): Future[Int]
 	
 }

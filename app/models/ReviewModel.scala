@@ -69,6 +69,7 @@ class ReviewModel @Inject() (val dbConfigProvider: DatabaseConfigProvider)
 		getReviews (
 			Reviews
 				.filter(_.productId === productId)
+				.sorted(_.reviewId.desc)
 				.drop((page-1)*size)
 				.take(size)
 				.result
@@ -80,6 +81,7 @@ class ReviewModel @Inject() (val dbConfigProvider: DatabaseConfigProvider)
 		getReviews (
 			Reviews
 				.filter(_.userId === userId)
+				.sorted(_.reviewId.desc)
 				.drop((page-1)*size)
 				.take(size)
 				.result
@@ -93,8 +95,8 @@ class ReviewModel @Inject() (val dbConfigProvider: DatabaseConfigProvider)
 	
 		
 	def insertReview(review: ReviewRequestDto): Future[Int] = {
-		val reviewQuery = Reviews.map(r => (r.productId, r.userId, r.rating, r.title, r.content)) returning Reviews.map(_.reviewId)
-		val reviewRow = (review.productId, review.userId, review.rating, review.title, review.content)
+		val reviewQuery = Reviews.map(r => (r.productId, r.userId, r.rating, r.title, r.content, r.orderProductId)) returning Reviews.map(_.reviewId)
+		val reviewRow = (review.productId, review.userId, review.rating, review.title, review.content, review.orderProductId)
 		val productReviewQuery = Products
 				.filter(_.productId === review.productId)
 				.map(product => (product.rating, product.reviewCount))

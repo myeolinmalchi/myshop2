@@ -29,16 +29,16 @@
             <div class="col-6">
                 <div class="row border-bottom">
                     <p class="ms-0 mt-2 mb-1 px-1 lh-1 fs-4">@product.name</p>
-                    @if(product.rating!=0) {
-                        <p class="card-text">
-                            @for(_ <- 1 to product.rating/2) {
-                                <i class="bi bi-star-fill text-warning"></i>
-                            } @if(product.rating%2==1){ <i class="bi bi-star-half text-warning"></i> }
-                            @for(_ <- 1 to (5-product.rating/2 - product.rating%2)) {
-                                <i class="bi bi-star text-warning"></i> }
-                            <span class="text-muted">(@product.reviewCount)</span>
-                        </p>
-                    } else{ <p class="card-text text-muted px-1">리뷰 없음</p> }
+@*                    @if(product.rating!=0) {*@
+@*                        <p class="card-text">*@
+@*                            @for(_ <- 1 to product.rating/2) {*@
+@*                                <i class="bi bi-star-fill text-warning"></i>*@
+@*                            } @if(product.rating%2==1){ <i class="bi bi-star-half text-warning"></i> }*@
+@*                            @for(_ <- 1 to (5-product.rating/2 - product.rating%2)) {*@
+@*                                <i class="bi bi-star text-warning"></i> }*@
+@*                            <span class="text-muted">(@product.reviewCount)</span>*@
+@*                        </p>*@
+@*                    } else{ <p class="card-text text-muted px-1">리뷰 없음</p> }*@
                 </div>
                 <div class="row border-bottom">
                     <input type="hidden" value="@product.price" name="price">

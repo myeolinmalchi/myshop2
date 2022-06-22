@@ -125,4 +125,11 @@ class AccountServiceImpl @Inject()()(implicit ws: WSClient, ec: ExecutionContext
 	override def userIdExist(userId: String): Future[Boolean] =
 		userModel userIdDoesNotExist userId map (!_)
 	
+	override def updateUserPw(userPw: String): Future[Int] =
+		userModel updateUserPw userPw
+		
+	override def updateName(name: String): Future[Int] =
+		userModel updateName name
+		
+	
 }

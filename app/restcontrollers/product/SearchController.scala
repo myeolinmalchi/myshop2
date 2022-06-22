@@ -31,10 +31,16 @@ class SearchController @Inject()(cc: ControllerComponents,
 			(code.getOrElse(""), page.getOrElse(1), size.getOrElse(48), seq.getOrElse(0))
 		(for {
 			productCount <- searchService getProductCount(keyword, codeVal)
-			products <- searchService searchProductsBy(keyword, codeVal, seqVal, pageVal, sizeVal)
-		} yield Ok(Json.toJson(products, productCount/sizeVal))) recover {
-			case ex:Exception => ex toJsonError
-		}
+			products <- searchService searchProductsOrderBy(keyword, codeVal, seqVal, pageVal, sizeVal)
+		} yield Ok(Json.obj (
+			"pageCount" -> productCount/sizeVal,
+			"category" -> code,
+			"size" -> sizeVal,
+			"page" -> pageVal,
+			"keyword" -> keyword,
+			"products" -> products,
+			"sort" -> seqVal
+		)))
 	}
 	
 	def getProduct(productId: Int): Action[AnyContent] = Action.async { implicit request =>
@@ -62,13 +68,40 @@ class SearchController @Inject()(cc: ControllerComponents,
 			Json.obj (
 				"page" -> pageVal,
 				"size" -> sizeVal,
-				"pageCount" -> (reviewCount / sizeVal + 1),
+				"pageCount" -> (reviewCount.toFloat / sizeVal.toFloat).ceil,
 				"reviews" -> Json.toJson(reviews)
 			)
 		}) recover {
 			case _: NoSuchElementException => NotFound
-			case _: Exception => BadRequest
+			case e: Exception => BadRequest(e.getMessage)
 		}
 	}
+	
+	def getQnas(productId: Int,
+							size: Option[Int],
+							page: Option[Int]): Action[AnyContent] = Action.async { implicit request =>
+		val pageVal = page.getOrElse(1)
+		val sizeVal = size.getOrElse(5)
+		(for {
+			qnas <- communicateService.getQnasByProductIdWithPagination(
+				productId = productId,
+				size = sizeVal,
+				page = pageVal
+			)
+			qnaCount <- communicateService.getQnaCountsByProductId(productId)
+		} yield Ok {
+			Json.obj (
+				"page" -> pageVal,
+				"size" -> sizeVal,
+				"pageCount" -> (qnaCount.toFloat / sizeVal.toFloat).ceil,
+				"qnas" -> Json.toJson(qnas)
+			)
+		}) recover {
+			case _: NoSuchElementException => NotFound
+			case e: Exception => BadRequest(e.getMessage)
+		}
+		
+	}
+	
 	
 }

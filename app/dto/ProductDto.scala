@@ -3,6 +3,7 @@ package dto
 import models.Tables._
 import play.api.libs.json.Json
 import scala.language.implicitConversions
+import slick.jdbc.GetResult
 
 case class ProductDto(var productId: Int,
 					  name: String,
@@ -12,7 +13,7 @@ case class ProductDto(var productId: Int,
 					  detailInfo: String,
 					  thumbnail: String,
 					  reviewCount: Int,
-					  rating: Int,
+					  rating: Option[Int],
 					  var optionList: List[ProductOptionDto] = Nil,
 					  var imageList: List[ProductImageDto] = Nil) {
 	
@@ -104,7 +105,22 @@ object ProductDto {
 	implicit val productWrites = Json.writes[ProductDto]
 	implicit val newInstance: Products#TableElementType => ProductDto =
 		p => new ProductDto(p.productId, p.name, p.sellerId, p.price.toInt, p.categoryCode, p.detailInfo, p.thumbnail, p
-				.reviewCount, p.rating, Nil, Nil)
+				.reviewCount, Some(p.rating), Nil, Nil)
+				
+	implicit val getProductResult = GetResult { r =>
+		ProductDto(
+			r.nextInt(),
+			r.nextString(),
+			r.nextString(),
+			r.nextInt(),
+			r.nextString(),
+			r.nextString(),
+			r.nextString(),
+			r.nextInt(),
+			r.nextIntOption()
+		)
+	}
+	
 }
 
 

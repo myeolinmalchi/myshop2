@@ -88,13 +88,22 @@ DELETE  /api/v1/user/:userId/cart/:cartId                   restcontrollers.user
 GET     /api/v1/user/:userId/order                          restcontrollers.user.OrderController.getOrders(userId)
 POST    /api/v1/user/:userId/order                          restcontrollers.user.OrderController.createOrder(userId)
 
-GET     /api/v1/user/:userId/product/:productId             restcontrollers.user.OrderController.checkUserOrdered(userId,productId: Int)
+#GET     /api/v1/user/:userId/product/:productId             restcontrollers.user.OrderController.checkUserOrdered(userId,productId: Int)
+GET     /api/v1/user/:userId/product/:productId             restcontrollers.user.CommunicateController.recentlyOrderedProductInfo(userId: String, productId: Int)
 
 # User Reviews
-#POST    /api/v1/user/:userId/review
+POST    /api/v1/user/:userId/review                         restcontrollers.user.CommunicateController.writeReview(userId: String)
 #PUT     /api/v1/user/:userId/review/:reviewId
 #GET     /api/v1/user/:userId/review/:reviewId
 #DELETE  /api/v1/user/:userId/review/:reviewId
+GET     /api/v1/user/:userId/product/:productId/info        restcontrollers.user.CommunicateController.recentlyOrderedProductInfo(userId: String, productId: Int)
+
+# User Data
+GET     /api/v1/user/:userId                                restcontrollers.user.AccountController.getUserData(userId: String)
+PUT     /api/v1/user/:userId                                restcontrollers.user.AccountController.updateUser(userId: String)
+
+# User QNAs
+POST    /api/v1/user/:userId/qna                            restcontrollers.user.CommunicateController.writeQna(userId)
 
 # Product Categories
 GET     /api/v1/category/main                               restcontrollers.product.CategoryController.getMainCategories
@@ -105,6 +114,7 @@ GET     /api/v1/category/:code/children                     restcontrollers.prod
 GET     /api/v1/product/search/:keyword                     restcontrollers.product.SearchController.search(code: Option[String], keyword, page: Option[Int], size: Option[Int],seq: Option[Int])
 GET     /api/v1/product/:productId                          restcontrollers.product.SearchController.getProduct(productId: Int)
 GET     /api/v1/product/:productId/reviews                  restcontrollers.product.SearchController.getReviews(productId: Int, size: Option[Int], page: Option[Int])
+GET     /api/v1/product/:productId/qnas                     restcontrollers.product.SearchController.getQnas(productId: Int, size: Option[Int], page: Option[Int])
 
 # Seller Account
 POST    /api/v1/seller/login                                restcontrollers.seller.AccountController.login

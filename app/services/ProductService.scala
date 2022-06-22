@@ -3,7 +3,6 @@ package services
 import cats.data.OptionT
 import dto._
 import javax.inject._
-import models.Tables.Products
 import models.{CategoryModel, ProductModel, ReviewModel}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
@@ -25,17 +24,16 @@ class ProductService @Inject()(productModel: ProductModel,
 			(product.name like s"%${kw}%") && (product.categoryCode like s"${code}%")
 		}
 	
-	private val orderBy = Vector(
-		(p: Products) => p.price.asc,
-		(p: Products) => p.price.desc,
-		(p: Products) => p.reviewCount.asc
+	val orderBy = Vector(
+		"price asc",
+		"price desc",
+		"review_count asc",
+		"review_count desc"
 	)
 	
 	def searchProductsBy(kw: String, code: String,
 											 seq: Int, page: Int, size: Int): Future[List[ProductDto]] =
-		productModel.getProductsSortBy(page, size, orderBy(seq)) { p: Products =>
-			(p.name like s"%${kw}%") && (p.categoryCode like s"${code}%")
-		}
+		productModel.searchProductsOrderBy(kw, code, page, size, orderBy(seq))
 	
 	def getProductById(productId: Int): OptionT[Future, ProductDto] =
 		productModel getProductById productId

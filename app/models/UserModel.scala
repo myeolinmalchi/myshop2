@@ -38,6 +38,12 @@ class UserModel @Inject() (val dbConfigProvider: DatabaseConfigProvider)
 			+= (user.userId, user.userPw, user.name, user.email, user.phonenumber))
 	}
 	
+	def updateUserPw(userPw: String): Future[Int] =
+		db run Users.map(_.userPw).update(userPw)
+		
+	def updateName(name: String): Future[Int] =
+		db run Users.map(_.name).update(name)
+	
 	def userIdDoesNotExist(userId: String): Future[Boolean] =
 		(db run Users.filter(_.userId === userId).map(_.userId).result).map(_.isEmpty)
 		
