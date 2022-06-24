@@ -25,7 +25,7 @@ class ProductModel @Inject()(val dbConfigProvider: DatabaseConfigProvider)
 				case h :: t => DBIO.sequence {
 					h.itemList map { item =>
 						val query = ProductStock returning ProductStock.map(_.productStockId)
-						val row = ProductStockRow(pid, 0, 0, parentId, item.productOptionItemId, depth)
+						val row = ProductStockRow(pid, 0, 0, parentId, item.productOptionItemId.getOrElse(0), depth)
 						(for {
 							stockId <- query += row
 							aff <- go(t, stockId.self, depth + 1)
@@ -72,10 +72,10 @@ class ProductModel @Inject()(val dbConfigProvider: DatabaseConfigProvider)
 			products <- getProductsWithFilterQuery(f).result
 			productDtoList <- toDto(products) { p: ProductDto =>
 				for {
-					options <- getOptionsByProductIdQuery(p.productId).result
+					options <- getOptionsByProductIdQuery(p.productId.getOrElse(0)).result
 					optionDtoList <- toDto(options) { o: ProductOptionDto =>
 						for {
-							items <- getItemsByOptionIdQuery(o.productOptionId).result
+							items <- getItemsByOptionIdQuery(o.productOptionId.getOrElse(0)).result
 							itemDtoList = items.map(ProductOptionItemDto.newInstance).toList
 						} yield o.setItems(itemDtoList)
 					}
@@ -98,10 +98,10 @@ class ProductModel @Inject()(val dbConfigProvider: DatabaseConfigProvider)
 			""".as[ProductDto]
 			result <- DBIOAction.sequence(products.toList map { p =>
 				for {
-					options <- getOptionsByProductIdQuery(p.productId).result
+					options <- getOptionsByProductIdQuery(p.productId.get).result
 					optionDtoList <- toDto(options) { o: ProductOptionDto =>
 						for {
-							items <- getItemsByOptionIdQuery(o.productOptionId).result
+							items <- getItemsByOptionIdQuery(o.productOptionId.get).result
 							itemDtoList = items.map(ProductOptionItemDto.newInstance).toList
 						} yield o.setItems(itemDtoList)
 					}
@@ -142,7 +142,7 @@ class ProductModel @Inject()(val dbConfigProvider: DatabaseConfigProvider)
 			images <- getImagesByProductIdQuery(productId).result
 			optionDtoList <- toDto(options) { o: ProductOptionDto =>
 				for {
-					items <- getItemsByOptionIdQuery(o.productOptionId).result
+					items <- getItemsByOptionIdQuery(o.productOptionId.get).result
 					itemDtoList <- toDto(items) { i: ProductOptionItemDto => DBIO.successful(i) }
 				} yield o.setItems(itemDtoList)
 			}
@@ -159,23 +159,26 @@ class ProductModel @Inject()(val dbConfigProvider: DatabaseConfigProvider)
 	def insertProductWithAll(p: ProductDto): Future[Int] =
 		db run (for {
 			productId <- Products returning Products.map(_.productId) +=
-				ProductsRow(p.productId, p.name, p.sellerId, p.price, p.categoryCode, p.detailInfo, p.thumbnail)
-			aff1 <- DBIO.sequence(
+				ProductsRow(0, p.name, p.sellerId, p.price, p.categoryCode, p.detailInfo, p.thumbnail)
+			optionList <- DBIO.sequence(
 				p.optionList map { option =>
 					for {
 						optionId <- ProductOptions returning ProductOptions.map(_.productOptionId) +=
 							ProductOptionsRow(productId, 0, option.name, option.optionSequence)
-						aff <- ProductOptionItems ++= option.itemList map { item =>
-							ProductOptionItemsRow(optionId, 0, item.name, item.itemSequence, item.surcharge)
-						}
-					} yield aff.getOrElse(0)
+						itemList <- DBIO.sequence(option.itemList map { item =>
+							for {
+								itemId <- ProductOptionItems returning ProductOptionItems.map(_.productOptionItemId) +=
+									ProductOptionItemsRow(optionId, 0, item.name, item.itemSequence, item.surcharge)
+							} yield item.setId(itemId)
+						})
+					} yield option.setItems(itemList)
 				}
 			)
 			aff2 <- ProductImages ++= p.imageList map { image =>
 				ProductImagesRow(productId, 0, image.image, image.sequence)
 			}
-			aff3 <- initProductStock(productId, p.optionList)
-		} yield aff1.sum + aff2.getOrElse(0) + aff3).transactionally
+			aff3 <- initProductStock(productId, optionList)
+		} yield aff2.getOrElse(0) + aff3).transactionally
 	
 	def getProductOptionStock(productId: Int, depth: Int, parentId: Int): Future[List[StockResponseDto]] = {
 		val query = ProductStock.filter(s => s.productId === productId && s.depth === depth)

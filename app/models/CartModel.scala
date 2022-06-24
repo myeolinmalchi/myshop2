@@ -84,7 +84,7 @@ class CartModel @Inject() (val dbConfigProvider: DatabaseConfigProvider,
 	}
 	
 	private def insertOrderProductDetails(pid: Int, items: List[ProductOptionItemDto]) = {
-		val rows = items.map(i => OrderProductDetailsRow(pid, 0, i.productOptionItemId))
+		val rows = items.map(i => OrderProductDetailsRow(pid, 0, i.productOptionItemId.get))
 		OrderProductDetails ++= rows
 	}
 
@@ -122,10 +122,10 @@ class CartModel @Inject() (val dbConfigProvider: DatabaseConfigProvider,
 		cart map { cart =>
 			(for {
 				checked <- productModel checkStockQuery(cart.itemList
-						.map(_.productOptionItemId), cart.quantity)
+						.map(_.productOptionItemId.get), cart.quantity)
 			} yield checked match {
 				case (_, true) => for {
-					stockId <- productModel getStockIdQuery cart.itemList.map(_.productOptionItemId)
+					stockId <- productModel getStockIdQuery cart.itemList.map(_.productOptionItemId.get)
 					aff <- productModel updateStockQuery(stockId, -cart.quantity)
 				} yield aff
 				case (stock, false) =>

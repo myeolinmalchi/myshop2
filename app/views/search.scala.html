@@ -37,7 +37,7 @@
                     @for(product <- products) {
                         <div class="col-3">
                             <div class="card rounded-0"
-                                onclick="location.href='@controllers.product.routes.SearchController.productDetail(product.productId)'">
+                                onclick="location.href='@controllers.product.routes.SearchController.productDetail(product.productId.get)'">
                                 <img src="@product.thumbnail" alt="">
                                 <div class="card-body">
                                     <h5 class="card-title">@product.name</h5>

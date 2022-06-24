@@ -121,8 +121,8 @@ POST    /api/v1/seller/login                                restcontrollers.sell
 POST    /api/v1/seller                                      restcontrollers.seller.AccountController.register
 
 # Seller Product
-POST    /api/v1/seller/:sellerId                            restcontrollers.seller.ProductController.addProduct(sellerId)
-GET     /api/v1/seller/:sellerId                            restcontrollers.seller.ProductController.getProducts(sellerId)
+POST    /api/v1/seller/:sellerId/product                    restcontrollers.seller.ProductController.addProduct(sellerId)
+GET     /api/v1/seller/:sellerId/product                    restcontrollers.seller.ProductController.getProducts(sellerId)
 
 # Seller Product Stock
 GET     /api/v1/seller/:sellerId/product/:productId/stock   restcontrollers.seller.ProductController.getAllProductStock(sellerId, productId: Int)

@@ -35,7 +35,13 @@ class ProductController @Inject()(cc: ControllerComponents)
 	def addProduct(sellerId: String): Action[AnyContent] = Action.async { implicit request =>
 		SellerAuth(sellerId).auth { _ =>
 			withJson[ProductDto] { product =>
-				productService.addProduct(product) trueOrError
+				productService.addProduct(product).map { _ =>
+					Ok(Json.toJson(true))
+				}.recover {
+					case e: Exception =>
+						e.printStackTrace()
+						Ok(Json.toJson(e.getMessage))
+				}
 			}
 		}
 	}

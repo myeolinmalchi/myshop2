@@ -67,9 +67,7 @@ const registerButton = document.getElementById("register-button")
 
 registerButton.addEventListener('click', () => {
     const name = orThrow(document, 'input[name="name"]')
-    for(i=1;i<100;i++) {
-        addProduct("minsuk4820", name+i)
-    }
+    addProduct("minsuk4820", name+i)
 })
 
 async function addProduct(sellerId, productName) {
