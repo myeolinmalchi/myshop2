@@ -21,7 +21,7 @@ case class ProductDto(productId: Option[Int],
 		ProductDto(productId, name, sellerId, price, categoryCode, detailInfo, thumbnail, reviewCount, rating, options, imageList)
 	
 	def setImages(images: List[ProductImageDto]): ProductDto =
-		ProductDto(productId, name, sellerId, price, categoryCode, detailInfo, thumbnail, reviewCount, rating, optionList, imageList)
+		ProductDto(productId, name, sellerId, price, categoryCode, detailInfo, thumbnail, reviewCount, rating, optionList, images)
 	
 	def setProductId(id: Int): ProductDto =
 		ProductDto(Some(id), name, sellerId, price, categoryCode, detailInfo, thumbnail, reviewCount, rating, optionList, imageList)

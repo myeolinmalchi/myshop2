@@ -36,4 +36,7 @@ class SearchServiceImpl @Inject()(productModel: ProductModel)
 	
 	override def getProductById(productId: Int): OptionT[Future, ProductDto] =
 		productModel.getProductById(productId)
+	
+	override def getRandomProducts(size: Int): Future[List[ProductDto]] =
+		productModel getRandomProducts size
 }

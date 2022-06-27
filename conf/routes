@@ -115,6 +115,7 @@ GET     /api/v1/product/search/:keyword                     restcontrollers.prod
 GET     /api/v1/product/:productId                          restcontrollers.product.SearchController.getProduct(productId: Int)
 GET     /api/v1/product/:productId/reviews                  restcontrollers.product.SearchController.getReviews(productId: Int, size: Option[Int], page: Option[Int])
 GET     /api/v1/product/:productId/qnas                     restcontrollers.product.SearchController.getQnas(productId: Int, size: Option[Int], page: Option[Int])
+GET     /api/v1/product/random/:size                        restcontrollers.product.SearchController.getRandomProducts(size: Int)
 
 # Seller Account
 POST    /api/v1/seller/login                                restcontrollers.seller.AccountController.login

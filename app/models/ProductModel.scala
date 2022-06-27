@@ -110,7 +110,26 @@ class ProductModel @Inject()(val dbConfigProvider: DatabaseConfigProvider)
 		} yield result
 	}
 	
-	
+	def getRandomProducts(size: Int): Future[List[ProductDto]] = db run {
+		for {
+			products <- sql"""
+				SELECT * FROM v_products
+				ORDER BY RAND()
+				LIMIT $size
+			""".as[ProductDto]
+			result <- DBIOAction.sequence(products.toList map { p =>
+				for {
+					options <- getOptionsByProductIdQuery(p.productId.get).result
+					optionDtoList <- toDto(options) { o: ProductOptionDto =>
+						for {
+							items <- getItemsByOptionIdQuery(o.productOptionId.get).result
+							itemDtoList = items.map(ProductOptionItemDto.newInstance).toList
+						} yield o.setItems(itemDtoList)
+					}
+				} yield p.setOptions(optionDtoList)
+			})
+		} yield result
+	}
 	
 	def checkProductExists(productId: Int): Future[Boolean] =
 		db run {

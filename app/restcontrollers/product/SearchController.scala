@@ -103,5 +103,13 @@ class SearchController @Inject()(cc: ControllerComponents,
 		
 	}
 	
+	def getRandomProducts(size: Int): Action[AnyContent] = Action.async { implicit request =>
+		searchService.getRandomProducts(size).map { products =>
+			Ok(Json.toJson(products))
+		} recover {
+			case ex: Exception => BadRequest(ex.getMessage)
+		}
+	}
+	
 	
 }

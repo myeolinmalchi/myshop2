@@ -14,4 +14,6 @@ trait SearchService {
 														seq: Int, page: Int, size: Int): Future[List[ProductDto]]
 	def getProductById(productId: Int): OptionT[Future, ProductDto]
 	
+	def getRandomProducts(size: Int): Future[List[ProductDto]]
+	
 }
