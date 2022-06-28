@@ -8,6 +8,7 @@ import models.Tables._
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
+import scala.math.Fractional.Implicits.infixFractionalOps
 import slick.dbio.DBIOAction
 import slick.jdbc.JdbcProfile
 import slick.jdbc.MySQLProfile.api._
@@ -21,21 +22,24 @@ class ProductModel @Inject()(val dbConfigProvider: DatabaseConfigProvider)
 		
 		def initProductStock(pid: Int, os: List[ProductOptionDto]): DBIOAction[Int, NoStream, Effect.All] = {
 			def go(os: List[ProductOptionDto],
-						 parentId: Int, depth: Int): DBIOAction[Int, NoStream, Effect.All] = os match {
+						 parentId: Int, depth: Int, stock: Int): DBIOAction[Int, NoStream, Effect.All] = os match {
 				case h :: t => DBIO.sequence {
 					h.itemList map { item =>
 						val query = ProductStock returning ProductStock.map(_.productStockId)
-						val row = ProductStockRow(pid, 0, 0, parentId, item.productOptionItemId.getOrElse(0), depth)
+						val nowStock = stock / h.itemList.length
+						val row = ProductStockRow(pid, nowStock, 0, parentId, item.productOptionItemId.getOrElse(0), depth)
 						(for {
 							stockId <- query += row
-							aff <- go(t, stockId.self, depth + 1)
+							aff <- go(t, stockId.self, depth + 1, nowStock)
 						} yield aff).transactionally
 					}
 				} map (_.sum)
 				case Nil => DBIO.successful(0)
 			}
 			
-			go(os, 0, 0)
+			val totStock = os.map(_.itemList.length).product * 100
+			
+			go(os, 0, 0, totStock)
 		}
 		
 		val getProductsWithFilterQuery = (f: Products => Rep[Boolean]) => Products.filter(f(_))
